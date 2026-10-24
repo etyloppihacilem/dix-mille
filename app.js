@@ -436,12 +436,12 @@ function startDrag(e, row) {
 /* ---------- Toast ---------- */
 
 let toastTimer = null;
-function toast(msg) {
+function toast(msg, ms = 1400) {
   const t = $('#toast');
   t.textContent = msg;
   t.classList.add('show');
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.classList.remove('show'), 1400);
+  toastTimer = setTimeout(() => t.classList.remove('show'), ms);
 }
 
 /* ---------- Screen wake lock ---------- */
@@ -489,6 +489,39 @@ $('#wakeBtn').addEventListener('click', async () => {
 document.addEventListener('visibilitychange', requestWake);
 // Some browsers only grant the lock after a user gesture.
 document.addEventListener('pointerdown', () => { if (wantWake && !wakeLock) requestWake(); }, { passive: true });
+
+/* ---------- Fullscreen ---------- */
+
+const root = document.documentElement;
+const fsSupported = !!(root.requestFullscreen || root.webkitRequestFullscreen);
+const isStandalone = () => matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches ||
+  navigator.standalone === true;
+const fsElement = () => document.fullscreenElement || document.webkitFullscreenElement;
+
+function updateFsBtn() {
+  const btn = $('#fsBtn');
+  // Already running as an installed app without the API: nothing to offer.
+  btn.hidden = !fsSupported && isStandalone();
+  btn.classList.toggle('on', !!fsElement());
+  btn.title = fsElement() ? 'Quitter le plein écran' : 'Plein écran';
+}
+
+$('#fsBtn').addEventListener('click', async () => {
+  if (!fsSupported) {
+    // iPhone Safari has no Fullscreen API: installing on the home screen is the way.
+    toast('Partager ⎙ puis « Sur l’écran d’accueil »', 4000);
+    return;
+  }
+  try {
+    if (fsElement()) await (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+    else await (root.requestFullscreen || root.webkitRequestFullscreen).call(root, { navigationUI: 'hide' });
+  } catch (e) {
+    toast('Plein écran indisponible');
+  }
+});
+document.addEventListener('fullscreenchange', updateFsBtn);
+document.addEventListener('webkitfullscreenchange', updateFsBtn);
+updateFsBtn();
 
 /* ---------- Wiring ---------- */
 

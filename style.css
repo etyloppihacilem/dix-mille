@@ -82,6 +82,7 @@ button {
   background: var(--surface); box-shadow: var(--shadow);
 }
 .icon-btn.on { color: var(--win); }
+#fsBtn.on { color: var(--accent); }
 .pill-btn {
   padding: 8px 14px; border-radius: 999px;
   background: var(--surface); box-shadow: var(--shadow);
