@@ -259,9 +259,12 @@ function renderGrid() {
   }
 
   const body = table.createTBody();
+  let stripe = 0; // zebra striping, restarted after each total
   for (const r of ROWS) {
     const tr = body.insertRow();
     tr.className = r.calc ? 'calc' : '';
+    if (r.calc) stripe = 0;
+    else if (stripe++ % 2) tr.classList.add('alt');
     if (r.key === 'total') tr.classList.add('grand');
     if (r.key === 'brelan' || r.key === 'upper') tr.classList.add('sep');
     const label = document.createElement('th');
