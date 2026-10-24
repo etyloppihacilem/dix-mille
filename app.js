@@ -161,7 +161,7 @@ let soundOn = true;
 try { soundOn = localStorage.getItem('dix-mille-sound') !== '0'; } catch (e) { /* ignore */ }
 
 // Plays a sequence of soft notes: [frequency, start offset (s), duration (s)].
-function tones(notes, volume = 0.07, type = 'sine') {
+function tones(notes, volume = 0.2, type = 'sine') {
   if (!soundOn) return;
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
@@ -184,12 +184,12 @@ function tones(notes, volume = 0.07, type = 'sine') {
 }
 
 const sfx = {
-  key: () => tones([[1400, 0, 0.03]], 0.025, 'triangle'),
+  key: () => tones([[1400, 0, 0.03]], 0.07, 'triangle'),
   add: () => tones([[660, 0, 0.09], [880, 0.07, 0.14]]),
-  zero: () => tones([[392, 0, 0.1], [330, 0.08, 0.16]], 0.06),
-  set: () => tones([[587, 0, 0.14]], 0.06),
-  undo: () => tones([[880, 0, 0.08], [587, 0.06, 0.12]], 0.05),
-  win: () => tones([[523, 0, 0.12], [659, 0.09, 0.12], [784, 0.18, 0.12], [1047, 0.27, 0.3]], 0.07),
+  zero: () => tones([[392, 0, 0.1], [330, 0.08, 0.16]], 0.18),
+  set: () => tones([[587, 0, 0.14]], 0.18),
+  undo: () => tones([[880, 0, 0.08], [587, 0.06, 0.12]], 0.15),
+  win: () => tones([[523, 0, 0.12], [659, 0.09, 0.12], [784, 0.18, 0.12], [1047, 0.27, 0.3]], 0.2),
 };
 
 function selectPlayer(id, mode) {
