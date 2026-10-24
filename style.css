@@ -291,6 +291,11 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
   padding: 0 2px 4px;
 }
 .quick-values .chip { min-width: 0; padding: 10px 0; font-size: 1.05rem; }
+.keypad.yams-pad {
+  grid-template-columns: repeat(3, 1fr);
+  grid-auto-rows: clamp(42px, 6.4dvh, 56px);
+}
+.keypad.yams-pad button.ok { grid-column: auto; font-size: 1.5rem; }
 .quick-values.wide { grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); }
 .quick-values .chip.two-line {
   display: flex; flex-direction: column; align-items: center; gap: 2px;

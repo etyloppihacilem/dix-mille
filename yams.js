@@ -19,7 +19,7 @@ const ROWS = [
   { key: 'petite', label: 'Petite suite', fixed: 30 },
   { key: 'grande', label: 'Grande suite', fixed: 40 },
   { key: 'yams', label: 'Yams', fixed: 50 },
-  { key: 'chance', label: 'Chance', hint: 'total des dés' },
+  { key: 'chance', label: 'Chance', hint: 'total des dés', typed: { min: 5, max: 30 } },
   { key: 'lower', label: 'Total bas', calc: true },
   { key: 'total', label: 'Total', calc: true },
 ];
@@ -48,6 +48,7 @@ function loadState() {
 
 let state = loadState();
 let editing = false;
+let typed = ''; // digits typed on the keypad for a `typed` row
 
 function save() {
   const { sel, ...rest } = state;
@@ -128,6 +129,7 @@ function selectCell(pid, row) {
   if (editing) return;
   const same = state.sel && state.sel.pid === pid && state.sel.row === row;
   state.sel = same ? null : { pid, row };
+  typed = '';
   render();
 }
 
@@ -158,6 +160,7 @@ function commit(value) {
     sfx.set();
   }
   state.sel = null;
+  typed = '';
 
   if (!wasDone && state.players.every((p) => isComplete(p.id))) {
     const best = Math.max(...state.players.map((p) => totals(p.id).total));
@@ -285,7 +288,7 @@ function renderGrid() {
       const v = cell(p.id, r.key);
       const selected = state.sel && state.sel.pid === p.id && state.sel.row === r.key;
       td.className += ' box' + (v === 0 ? ' crossed' : '') + (selected ? ' selected' : '');
-      td.textContent = v == null ? '' : v === 0 ? '✗' : v;
+      td.textContent = selected && typed ? typed : v == null ? '' : v === 0 ? '✗' : v;
       td.addEventListener('click', () => selectCell(p.id, r.key));
     }
   }
@@ -306,8 +309,23 @@ function quickValues(r) {
     return FACES.map((glyph, i) => ({ main: glyph, sub: `= ${r.mult * (i + 1)}`, value: r.mult * (i + 1), die: true }));
   }
   if (r.fixed) return [{ main: String(r.fixed), value: r.fixed }];
-  // Chance: total of five dice.
-  return Array.from({ length: 26 }, (_, i) => ({ main: String(i + 5), value: i + 5 }));
+  return [];
+}
+
+function typeKey(k) {
+  const r = state.sel && rowByKey(state.sel.row);
+  if (!r || !r.typed) return;
+  if (k === 'ok') {
+    const n = parseInt(typed, 10);
+    if (typed === '') { toast('Tape le total des dés'); return; }
+    if (n < r.typed.min || n > r.typed.max) { toast(`Entre ${r.typed.min} et ${r.typed.max}`); return; }
+    commit(n);
+    return;
+  }
+  sfx.key();
+  if (k === 'back') typed = typed.slice(0, -1);
+  else if (typed.length < 2) typed = (typed + k).replace(/^0+/, '');
+  render();
 }
 
 function askValue() {
@@ -354,7 +372,9 @@ function renderEntry() {
   const current = cell(p.id, r.key);
   $('#entryDot').style.background = p.color;
   $('#entryName').textContent = `${p.name} · ${r.label}${r.hint ? ` (${r.hint})` : ''}`;
-  $('#entryCalc').textContent = current == null ? 'Choisis les points' : `Actuel : ${current === 0 ? '✗' : current}`;
+  $('#entryCalc').textContent = typed ? `${typed} pts`
+    : current == null ? (r.typed ? 'Tape le total' : 'Choisis les points')
+    : `Actuel : ${current === 0 ? '✗' : current}`;
 
   const chip = (box, text, onClick, cls = '') => {
     const b = document.createElement('button');
@@ -365,9 +385,22 @@ function renderEntry() {
     box.append(b);
   };
   chip(actions, '✗ Barrer', () => commit(0), 'cross' + (current === 0 ? ' on' : ''));
-  chip(actions, 'Autre…', askValue, 'clear');
+  if (!r.typed) chip(actions, 'Autre…', askValue, 'clear');
   if (current != null) chip(actions, 'Vider', () => commit(null), 'clear');
   chip(actions, 'Fermer', () => { state.sel = null; render(); }, 'clear');
+  if (r.typed) {
+    quick.className = 'keypad yams-pad';
+    for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'ok']) {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = k === 'back' ? '⌫' : k === 'ok' ? '✓' : k;
+      if (k === 'back') { b.className = 'fn'; b.setAttribute('aria-label', 'Effacer'); }
+      if (k === 'ok') { b.className = 'ok'; b.setAttribute('aria-label', 'Valider'); }
+      b.addEventListener('click', () => typeKey(k));
+      quick.append(b);
+    }
+    return;
+  }
   quick.className = 'quick-values' + (r.face || r.mult ? ' wide' : '');
   for (const q of quickValues(r)) {
     const b = document.createElement('button');
@@ -391,7 +424,10 @@ $('#newGameBtn').addEventListener('click', newGame);
 
 document.addEventListener('keydown', (e) => {
   if (editing || e.target.tagName === 'INPUT') return;
-  if (e.key === 'Escape') { state.sel = null; render(); }
+  if (/^[0-9]$/.test(e.key)) typeKey(e.key);
+  else if (e.key === 'Backspace') typeKey('back');
+  else if (e.key === 'Enter') typeKey('ok');
+  else if (e.key === 'Escape') { state.sel = null; typed = ''; render(); }
   else if ((e.ctrlKey || e.metaKey) && e.key === 'z') { undo(); save(); render(); }
   else return;
   e.preventDefault();

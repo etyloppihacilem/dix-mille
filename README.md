@@ -20,7 +20,7 @@ La page d'accueil propose trois jeux :
   carré (4 × la valeur), full (25), petite suite (30), grande suite (40), yams (50), chance.
 - Toucher une case : des bulles proposent les choix possibles — nombre de dés (1 à 5)
   pour As à 6, valeur du dé pour le brelan et le carré, valeur fixe pour le full, les
-  suites et le yams, 5 à 30 pour la chance. `✗ Barrer` met 0, `Autre…` permet une
+  suites et le yams ; pour la chance, un pavé numérique (total de 5 à 30). `✗ Barrer` met 0, `Autre…` permet une
   valeur libre, `Vider` efface la case.
 - Le tour passe au joueur suivant dès qu'une case vide est remplie (toucher un nom
   en haut d'une colonne choisit qui joue) ; la colonne du
