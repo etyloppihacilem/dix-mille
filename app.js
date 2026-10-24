@@ -27,6 +27,7 @@ function defaultState() {
     input: '',
     negative: false,
     history: [],
+    redo: [],
   };
 }
 
@@ -63,17 +64,14 @@ function nextId(id) {
   return state.players[(i + 1) % state.players.length].id;
 }
 
-function snapshot() {
-  state.history.push({
+function capture() {
+  return {
     scores: state.players.map((p) => [p.id, p.score, p.last]),
     turnId: state.turnId,
-  });
-  if (state.history.length > 300) state.history.shift();
+  };
 }
 
-function undo() {
-  const h = state.history.pop();
-  if (!h) { toast('Rien à annuler'); return; }
+function restore(h) {
   for (const [id, score, last] of h.scores) {
     const p = byId(id);
     if (p) { p.score = score; p.last = last; }
@@ -83,7 +81,28 @@ function undo() {
   state.selectedId = state.turnId;
   state.mode = 'add';
   clearInput();
+}
+
+function snapshot() {
+  state.history.push(capture());
+  if (state.history.length > 300) state.history.shift();
+  state.redo = [];
+}
+
+function undo() {
+  const h = state.history.pop();
+  if (!h) { toast('Rien à annuler'); return; }
+  state.redo.push(capture());
+  restore(h);
   toast('Annulé');
+}
+
+function redo() {
+  const h = state.redo.pop();
+  if (!h) return;
+  state.history.push(capture());
+  restore(h);
+  toast('Rétabli');
 }
 
 function clearInput() { state.input = ''; state.negative = false; }
@@ -199,6 +218,7 @@ const sfx = {
   add: () => tones([[660, 0, 0.09], [880, 0.07, 0.14]]),
   zero: () => tones([[392, 0, 0.1], [330, 0.08, 0.16]], 0.75),
   set: () => tones([[587, 0, 0.14]], 0.75),
+  redo: () => tones([[587, 0, 0.08], [880, 0.06, 0.12]], 0.65),
   undo: () => tones([[880, 0, 0.08], [587, 0.06, 0.12]], 0.65),
   win: () => tones([[523, 0, 0.12], [659, 0.09, 0.12], [784, 0.18, 0.12], [1047, 0.27, 0.3]], 0.8),
 };
@@ -253,6 +273,7 @@ function newGame() {
   if (!confirm('Remettre tous les scores à 0 ?')) return;
   for (const p of state.players) { p.score = 0; p.last = null; }
   state.history = [];
+  state.redo = [];
   state.turnId = state.selectedId = state.players[0]?.id ?? null;
   state.mode = 'add';
   clearInput();
@@ -411,7 +432,8 @@ function renderEntry() {
   const p = byId(state.selectedId);
   const modeBtn = $('#modeBtn');
   modeBtn.classList.toggle('on', state.mode === 'set');
-  modeBtn.textContent = state.mode === 'set' ? 'Annuler' : 'Corriger';
+  $('#redoBtn').hidden = !state.redo.length;
+  modeBtn.textContent = state.mode === 'set' ? 'Retour' : 'Corriger';
   if (!p) {
     $('#entryDot').style.background = '';
     $('#entryName').textContent = '';
@@ -605,6 +627,13 @@ $('#keypad').addEventListener('click', (e) => {
 $('#keypad').addEventListener('dblclick', (e) => e.preventDefault());
 
 $('#modeBtn').addEventListener('click', toggleMode);
+$('#redoBtn').addEventListener('click', () => {
+  if (!state.redo.length) return;
+  sfx.redo();
+  redo();
+  save();
+  render();
+});
 $('#editBtn').addEventListener('click', () => setEditing(!editing));
 $('#doneBtn').addEventListener('click', () => setEditing(false));
 $('#addPlayerBtn').addEventListener('click', addPlayer);

@@ -7,7 +7,7 @@ Feuille de score pour le jeu de dés **dix-mille**, pensée pour le téléphone.
   au score et passe automatiquement au joueur suivant (valider à vide = 0, tour raté).
 - Toucher un joueur le sélectionne (la rotation reprend à partir de lui).
 - Toucher le **score** d'un joueur (ou le bouton *Corriger*) permet de fixer son score à la main.
-- `±` pour une valeur négative, `↶` pour annuler la dernière action.
+- `±` pour une valeur négative, `↶` pour annuler la dernière action, puis « ↷ Rétablir » pour la refaire.
 - Bouton **Joueurs** : renommer, changer la couleur, ajouter/supprimer, nouvelle partie.
 - Poignée `⋮⋮` : glisser pour réorganiser l'ordre des joueurs (aussi en cours de partie).
 - Les scores peuvent dépasser 10 000 (règle du dernier tour) ; ils passent en doré.
