@@ -240,6 +240,7 @@ function renderTargets() {
 function renderBoard() {
   const board = $('#board');
   board.textContent = '';
+  board.classList.toggle('compact', state.players.length > 3);
   const w = winner();
   const best = Math.max(0, ...state.players.map((p) => total(p.id)));
   for (const p of state.players) {
@@ -267,7 +268,12 @@ function renderSheet() {
   }
   const m = state.current;
   const teams = state.players;
-  const cols = `minmax(96px, 1.2fr) repeat(${teams.length}, minmax(64px, 1fr))`;
+  // Beyond 2 teams the labels no longer fit beside the buttons: each label
+  // then takes its own line above the row of buttons.
+  const many = teams.length > 2;
+  const cols = many
+    ? `repeat(${teams.length}, minmax(0, 1fr))`
+    : `minmax(96px, 1.2fr) repeat(${teams.length}, minmax(64px, 1fr))`;
 
   const card = el('section', 'manche' + (state.editIndex != null ? ' editing-manche' : ''));
   const head = el('div', 'manche-head');
@@ -282,9 +288,9 @@ function renderSheet() {
   }
   card.append(head);
 
-  const grid = el('div', 'manche-grid');
+  const grid = el('div', 'manche-grid' + (many ? ' many' : ''));
   grid.style.gridTemplateColumns = cols;
-  grid.append(el('div'));
+  if (!many) grid.append(el('div'));
   for (const p of teams) {
     const th = el('div', 'col-head', p.name);
     th.style.setProperty('--pc', p.color);
@@ -314,15 +320,16 @@ function renderSheet() {
     const n = m.scopes[p.id] ?? 0;
     const step = el('div', 'stepper' + (n ? ' on' : ''));
     step.style.setProperty('--pc', p.color);
-    const minus = el('button', '', '−');
+    const minus = el('button', 'minus', '−');
     minus.type = 'button';
     minus.setAttribute('aria-label', `Retirer une scopa à ${p.name}`);
     minus.addEventListener('click', () => addScope(p.id, -1));
-    const plus = el('button', '', '+');
+    const plus = el('button', 'plus', '+');
     plus.type = 'button';
     plus.setAttribute('aria-label', `Ajouter une scopa à ${p.name}`);
     plus.addEventListener('click', () => addScope(p.id, 1));
-    step.append(minus, el('span', 'count', n), plus);
+    if (many) step.append(plus, el('span', 'count', n), minus);
+    else step.append(minus, el('span', 'count', n), plus);
     grid.append(step);
   }
 

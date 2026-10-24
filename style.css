@@ -515,6 +515,30 @@ body.home { overflow-y: auto; }
   font-variant-numeric: tabular-nums;
 }
 
+/* 3 to 6 teams: labels on their own line, narrow team columns. */
+.manche-grid.many { gap: 6px 5px; }
+.manche-grid.many .pt-label {
+  grid-column: 1 / -1;
+  flex-direction: row; align-items: baseline; gap: 8px;
+  margin-top: 4px;
+}
+.manche-grid.many .col-head { font-size: .72rem; padding-bottom: 3px; }
+.manche-grid.many .pt-btn {
+  height: 42px; font-size: 1rem;
+  background: color-mix(in srgb, var(--pc) 10%, transparent);
+}
+.manche-grid.many .pt-btn.on { background: var(--pc); }
+.manche-grid.many .stepper { flex-direction: column; height: auto; }
+.manche-grid.many .stepper button { width: 100%; height: 34px; }
+.manche-grid.many .stepper .count { padding: 2px 0; }
+.manche-grid.many .total-label { margin-top: 2px; }
+.manche-grid.many .manche-total { font-size: 1.1rem; }
+
+.board.compact { gap: 6px; }
+.board.compact .team { flex-basis: calc(33.333% - 4px); padding: 4px 6px 5px; border-top-width: 4px; }
+.board.compact .team-name { font-size: .78rem; }
+.board.compact .team-score { font-size: 1.4rem; }
+
 .past { margin-top: 14px; }
 .past h3 { font-size: .85rem; color: var(--muted); margin: 0 4px 6px; font-weight: 600; }
 .past-row {
@@ -526,7 +550,7 @@ body.home { overflow-y: auto; }
 }
 .past-row.current { outline: 2px solid var(--win); }
 .past-num { font-weight: 700; color: var(--muted); min-width: 52px; font-size: .9rem; }
-.past-scores { flex: 1; display: flex; gap: 14px; }
+.past-scores { flex: 1; display: flex; gap: 10px 14px; flex-wrap: wrap; }
 .past-score {
   font-weight: 800; font-variant-numeric: tabular-nums;
   border-bottom: 3px solid var(--pc);
