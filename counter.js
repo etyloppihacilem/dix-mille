@@ -29,6 +29,8 @@ function defaultState() {
     target: GAME.target,
     history: [],
     redo: [],
+    log: [],          // one entry per validation: { pid, v, kind: 'add' | 'set' }
+    firstOverId: null, // first player to reach the target: the game ends when it is their turn again
   };
 }
 
@@ -66,6 +68,7 @@ function capture() {
   return {
     scores: state.players.map((p) => [p.id, p.score, p.last]),
     turnId: state.turnId,
+    firstOverId: state.firstOverId,
   };
 }
 
@@ -75,6 +78,7 @@ function restore(h) {
     if (p) { p.score = score; p.last = last; }
   }
   state.turnId = h.turnId;
+  state.firstOverId = h.firstOverId ?? null;
   ensureIds();
   state.selectedId = state.turnId;
   state.mode = 'add';
@@ -90,7 +94,8 @@ function snapshot() {
 function undo() {
   const h = state.history.pop();
   if (!h) { toast('Rien à annuler'); return; }
-  state.redo.push(capture());
+  // Each history step matches the log entry its validation added.
+  state.redo.push({ ...capture(), entry: state.log.pop() });
   restore(h);
   toast('Annulé');
 }
@@ -100,6 +105,7 @@ function redo() {
   if (!h) return;
   state.history.push(capture());
   restore(h);
+  if (h.entry) state.log.push(h.entry);
   toast('Rétabli');
 }
 
@@ -150,6 +156,7 @@ function validate() {
     if (state.input === '') { toast('Tape le nouveau score'); return; }
     snapshot();
     p.score = inputValue();
+    state.log.push({ pid: p.id, v: p.score, kind: 'set' });
     p.last = null;
     state.mode = 'add';
     sfx.set();
@@ -161,14 +168,74 @@ function validate() {
     const before = p.score;
     p.score += v;
     p.last = v;
+    state.log.push({ pid: p.id, v, kind: 'add' });
+    if (!state.firstOverId && p.score >= target()) state.firstOverId = p.id;
     if (before < target() && p.score >= target()) { sfx.win(); toast(`${p.name} atteint ${fmt(target())} !`, 2500); }
     else if (v === 0) sfx.zero();
     else sfx.add();
     state.turnId = nextId(p.id);
     state.selectedId = state.turnId;
+    if (gameOver()) {
+      // Everyone had their last turn.
+      clearInput();
+      scrollToSelected = true;
+      setTimeout(showStats, 600);
+      return;
+    }
   }
   clearInput();
   scrollToSelected = true;
+}
+
+const gameOver = () => !!state.firstOverId && state.turnId === state.firstOverId;
+
+/* ---------- Statistics ---------- */
+
+function showStats() {
+  const T = target();
+  const per = state.players.map((p) => ({ p, turns: 0, sum: 0, best: null, zeros: 0, reachedAt: null, score: 0, points: [[0, 0]] }));
+  const byPid = Object.fromEntries(per.map((x) => [x.p.id, x]));
+  for (const e of state.log) {
+    const s = byPid[e.pid];
+    if (!s) continue;
+    if (e.kind === 'set') {
+      s.score = e.v;
+      s.points[s.points.length - 1] = [s.turns, e.v];
+    } else {
+      s.turns++;
+      s.score += e.v;
+      s.sum += e.v;
+      s.best = Math.max(s.best ?? e.v, e.v);
+      if (e.v === 0) s.zeros++;
+      s.points.push([s.turns, s.score]);
+    }
+    if (s.reachedAt == null && s.score >= T) s.reachedAt = s.turns;
+  }
+  const rounds = Math.max(0, ...per.map((x) => x.turns));
+  const best = Math.max(...state.players.map((p) => p.score));
+  const leaders = state.players.filter((p) => p.score === best).map((p) => p.name).join(' et ');
+  const over = state.players.some((p) => p.score >= T);
+  const dash = '—';
+  openStats({
+    title: over ? 'Fin de partie' : 'Statistiques',
+    headline: `${over ? '🏆' : '👑'} ${leaders} : ${fmt(best)} points · ${rounds} tour${rounds > 1 ? 's' : ''}`,
+    series: per.map((x) => ({ name: x.p.name, color: x.p.color, points: x.points })),
+    chart: { target: T, xName: 'tour', xTitle: 'Tour' },
+    chartNote: state.log.length ? null : 'La progression n’est enregistrée que pour les parties commencées après cette mise à jour.',
+    tables: [{
+      title: 'Résumé',
+      players: state.players,
+      rows: [
+        ['Score', ...state.players.map((p) => fmt(p.score))],
+        ['Tours joués', ...per.map((x) => x.turns)],
+        [`Tour du ${fmt(T)}`, ...per.map((x) => x.reachedAt ?? dash)],
+        ['Moyenne par tour', ...per.map((x) => (x.turns ? fmt(Math.round(x.sum / x.turns)) : dash))],
+        ['Meilleur tour', ...per.map((x) => (x.best != null ? fmt(x.best) : dash))],
+        ['Tours à 0', ...per.map((x) => (x.turns ? `${x.zeros} (${Math.round((100 * x.zeros) / x.turns)} %)` : dash))],
+      ],
+    }],
+    onNewGame: newGame,
+  });
 }
 
 function selectPlayer(id, mode) {
@@ -219,6 +286,8 @@ function newGame() {
   for (const p of state.players) { p.score = 0; p.last = null; }
   state.history = [];
   state.redo = [];
+  state.log = [];
+  state.firstOverId = null;
   state.turnId = state.selectedId = state.players[0]?.id ?? null;
   state.mode = 'add';
   clearInput();
@@ -341,6 +410,7 @@ function renderEntry() {
   const modeBtn = $('#modeBtn');
   modeBtn.classList.toggle('on', state.mode === 'set');
   $('#redoBtn').hidden = !state.redo.length;
+  $('#endStatsBtn').hidden = !gameOver();
   modeBtn.textContent = state.mode === 'set' ? 'Retour' : 'Corriger';
   if (!p) {
     $('#entryDot').style.background = '';
@@ -379,6 +449,8 @@ $('#editBtn').addEventListener('click', () => setEditing(!editing));
 $('#doneBtn').addEventListener('click', () => setEditing(false));
 $('#addPlayerBtn').addEventListener('click', addPlayer);
 $('#newGameBtn').addEventListener('click', newGame);
+$('#statsBtn').addEventListener('click', showStats);
+$('#endStatsBtn').addEventListener('click', showStats);
 
 // Physical keyboard support (handy on desktop).
 document.addEventListener('keydown', (e) => {

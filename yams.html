@@ -38,6 +38,7 @@
         <div id="entryName" class="entry-name"></div>
         <div id="entryCalc" class="entry-calc"></div>
       </div>
+      <button id="endStatsBtn" class="mode-btn on" type="button" hidden>📊 Stats</button>
       <button id="undoBtn" class="mode-btn" type="button" aria-label="Annuler" hidden>↶</button>
       <button id="redoBtn" class="mode-btn" type="button" aria-label="Rétablir" hidden>↷</button>
     </div>
@@ -47,6 +48,7 @@
 
   <section id="editPanel" class="panel edit-panel" hidden>
     <button id="addPlayerBtn" class="wide-btn" type="button">+ Ajouter un joueur</button>
+    <button id="statsBtn" class="wide-btn" type="button">📊 Statistiques de la partie</button>
     <button id="newGameBtn" class="wide-btn danger" type="button">Nouvelle partie (feuilles vides)</button>
     <button id="doneBtn" class="wide-btn primary" type="button">Jouer</button>
   </section>
@@ -54,6 +56,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
   <script src="common.js"></script>
+  <script src="stats.js"></script>
   <script src="yams.js"></script>
 </body>
 </html>

@@ -103,6 +103,49 @@ function redo() {
   render();
 }
 
+/* ---------- Statistics ---------- */
+
+function showStats() {
+  const teams = state.players;
+  const played = state.manches.filter((m) => !m.carry);
+  const series = teams.map((p) => {
+    let t = 0;
+    return {
+      name: p.name,
+      color: p.color,
+      points: [[0, 0], ...state.manches.map((m, i) => [i + 1, (t += mancheScore(m, p.id))])],
+    };
+  });
+  const count = (pid, key) => played.filter((m) => m.points[key] === pid).length;
+  const scopes = (pid) => played.reduce((t, m) => t + (m.scopes[pid] ?? 0), 0);
+  const bestManche = (pid) => Math.max(0, ...played.map((m) => mancheScore(m, pid)));
+  // Manches where the team scored strictly more than every other team.
+  const won = (pid) => played.filter((m) => teams.every((o) => o.id === pid || mancheScore(m, o.id) < mancheScore(m, pid))).length;
+
+  const w = winner();
+  const best = Math.max(0, ...teams.map((p) => total(p.id)));
+  const leaders = teams.filter((p) => total(p.id) === best).map((p) => p.name).join(' et ');
+  const n = state.manches.length;
+  openStats({
+    title: w ? 'Fin de partie' : 'Statistiques',
+    headline: `${w ? `🏆 ${w.name}` : `👑 ${leaders}`} : ${best} points · ${n} manche${n > 1 ? 's' : ''}`,
+    series,
+    chart: { target: state.target, xName: 'manche', xTitle: 'Manche' },
+    tables: [{
+      title: 'Résumé',
+      players: teams,
+      rows: [
+        ['Total', ...teams.map((p) => total(p.id))],
+        ['Manches gagnées', ...teams.map((p) => won(p.id))],
+        ['Meilleure manche', ...teams.map((p) => bestManche(p.id))],
+        ...POINTS.map((pt) => [pt.label, ...teams.map((p) => count(p.id, pt.key))]),
+        ['Scopes', ...teams.map((p) => scopes(p.id))],
+      ],
+    }],
+    onNewGame: newGame,
+  });
+}
+
 /* ---------- Actions ---------- */
 
 function togglePoint(key, pid) {
@@ -133,7 +176,11 @@ function validateManche() {
     state.editIndex = null;
   });
   const w = winner();
-  if (w && w !== before) { sfx.win(); toast(`🏆 ${w.name} gagne avec ${total(w.id)} points !`, 3500); }
+  if (w && w !== before) {
+    sfx.win();
+    toast(`🏆 ${w.name} gagne avec ${total(w.id)} points !`, 3500);
+    setTimeout(showStats, 900);
+  }
   else sfx.add();
   $('#sheet').scrollTop = 0;
 }
@@ -256,6 +303,12 @@ function renderBoard() {
   const info = el('div', 'board-info' + (w ? ' won' : ''), w
     ? `🏆 ${w.name} gagne · ${count}`
     : `Partie en ${state.target} · ${count}`);
+  if (w) {
+    const stats = el('button', 'link-btn stats-link', '📊 Stats');
+    stats.type = 'button';
+    stats.addEventListener('click', showStats);
+    info.append(' · ', stats);
+  }
   board.append(info);
 }
 
@@ -383,6 +436,7 @@ $('#editBtn').addEventListener('click', () => setEditing(!editing));
 $('#doneBtn').addEventListener('click', () => setEditing(false));
 $('#addPlayerBtn').addEventListener('click', addPlayer);
 $('#newGameBtn').addEventListener('click', newGame);
+$('#statsBtn').addEventListener('click', showStats);
 
 document.addEventListener('keydown', (e) => {
   if (editing || e.target.tagName === 'INPUT') return;

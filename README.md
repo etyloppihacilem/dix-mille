@@ -37,6 +37,22 @@ La page d'accueil propose trois jeux :
 - Score à atteindre au choix (11, 16, 21 ou 31) dans le menu *Équipes* ; l'équipe
   seule en tête au-delà de l'objectif gagne.
 
+## Statistiques
+
+À la fin de la partie, un écran de statistiques s'ouvre (aussi accessible à tout
+moment depuis le menu *Joueurs / Équipes*) :
+
+- un graphique de progression du score cumulé de chacun, tour par tour (ou manche
+  par manche), avec la ligne d'objectif ; toucher le graphique affiche les scores ;
+- un tableau récapitulatif : tours joués, tour du 10 000, moyenne, meilleur tour et
+  tours à 0 au dix-mille ; haut, bonus, bas, combinaisons, yams et cases barrées au
+  yams ; manches gagnées, meilleure manche et répartition des points à la scoppa.
+
+Fin de partie : au dix-mille, quand tout le monde a joué son dernier tour après le
+premier joueur à 10 000 ; au yams, quand la grille est pleine ; à la scoppa, quand une
+équipe est seule en tête au-delà de l'objectif. Les graphiques sont dessinés en SVG
+par `stats.js`, sans bibliothèque externe.
+
 ## Commun
 
 - Bouton **Joueurs / Équipes** : renommer, changer la couleur, réordonner, ajouter/supprimer, nouvelle partie.

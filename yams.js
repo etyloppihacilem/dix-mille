@@ -37,6 +37,7 @@ function defaultState() {
     sel: null,     // { pid, row } cell being filled
     history: [],
     redo: [],
+    log: [],       // one entry per filled box: { pid, row, value, fill }
   };
 }
 
@@ -58,7 +59,7 @@ function save() {
 
 const byId = (id) => state.players.find((p) => p.id === id);
 const indexOf = (id) => state.players.findIndex((p) => p.id === id);
-const cell = (pid, row) => state.cells[pid]?.[row] ?? null;
+const cell = (pid, row, cells = state.cells) => cells[pid]?.[row] ?? null;
 
 function ensureIds() {
   if (!state.players.length) { state.turnId = null; state.sel = null; return; }
@@ -72,16 +73,16 @@ function nextId(id) {
 
 /* ---------- Totals ---------- */
 
-function sum(pid, rows) {
-  return rows.reduce((t, r) => t + (cell(pid, r.key) ?? 0), 0);
+function sum(pid, rows, cells) {
+  return rows.reduce((t, r) => t + (cell(pid, r.key, cells) ?? 0), 0);
 }
 
-function totals(pid) {
+function totals(pid, cells = state.cells) {
   const upperRows = ROWS.filter((r) => r.face);
-  const upper = sum(pid, upperRows);
-  const upperDone = upperRows.every((r) => cell(pid, r.key) != null);
+  const upper = sum(pid, upperRows, cells);
+  const upperDone = upperRows.every((r) => cell(pid, r.key, cells) != null);
   const bonus = upper >= BONUS_THRESHOLD ? BONUS : 0;
-  const lower = sum(pid, ROWS.filter((r) => !r.face && !r.calc));
+  const lower = sum(pid, ROWS.filter((r) => !r.face && !r.calc), cells);
   return { upper, upperDone, bonus, lower, total: upper + bonus + lower };
 }
 
@@ -110,7 +111,8 @@ function undo() {
   const h = state.history.pop();
   if (!h) { toast('Rien à annuler'); return; }
   sfx.undo();
-  state.redo.push(capture());
+  // Each history step matches the log entry its commit added.
+  state.redo.push({ ...capture(), entry: state.log.pop() });
   restore(h);
   toast('Annulé');
 }
@@ -121,7 +123,59 @@ function redo() {
   sfx.redo();
   state.history.push(capture());
   restore(h);
+  if (h.entry) state.log.push(h.entry);
   toast('Rétabli');
+}
+
+/* ---------- Statistics ---------- */
+
+function showStats() {
+  // Replay the log to rebuild each player's total after each of their turns.
+  const cells = {};
+  const series = Object.fromEntries(state.players.map((p) => [p.id, { turns: 0, points: [[0, 0]] }]));
+  for (const e of state.log) {
+    const s = series[e.pid];
+    if (!s) continue;
+    cells[e.pid] = cells[e.pid] || {};
+    if (e.value == null) delete cells[e.pid][e.row];
+    else cells[e.pid][e.row] = e.value;
+    const t = totals(e.pid, cells).total;
+    if (e.fill) { s.turns++; s.points.push([s.turns, t]); }
+    else s.points[s.points.length - 1] = [s.turns, t];
+  }
+
+  const all = state.players.map((p) => ({ p, t: totals(p.id) }));
+  const best = Math.max(...all.map((x) => x.t.total));
+  const leaders = all.filter((x) => x.t.total === best).map((x) => x.p.name).join(' et ');
+  const done = state.players.every((p) => isComplete(p.id));
+  const filled = (pid) => PLAY_ROWS.filter((r) => cell(pid, r.key) != null).length;
+  const crossed = (pid) => PLAY_ROWS.filter((r) => cell(pid, r.key) === 0).length;
+  const yams = (pid) => (cell(pid, 'yams') == null ? '—' : cell(pid, 'yams') > 0 ? '✓' : '✗');
+  const lowerRows = PLAY_ROWS.filter((r) => !r.face);
+  const made = (pid) => lowerRows.filter((r) => cell(pid, r.key) > 0).length;
+
+  openStats({
+    title: done ? 'Fin de partie' : 'Statistiques',
+    headline: `${done ? '🏆' : '👑'} ${leaders} : ${fmt(best)} points`,
+    series: state.players.map((p) => ({ name: p.name, color: p.color, points: series[p.id].points })),
+    chart: { xName: 'tour', xTitle: 'Tour' },
+    chartNote: state.log.length ? null : 'La progression n’est enregistrée que pour les parties commencées après cette mise à jour.',
+    tables: [{
+      title: 'Résumé',
+      players: state.players,
+      rows: [
+        ['Total', ...all.map((x) => fmt(x.t.total))],
+        ['Haut', ...all.map((x) => x.t.upper)],
+        [`Bonus (${BONUS_THRESHOLD})`, ...all.map((x) => (x.t.bonus ? `+${x.t.bonus}` : x.t.upperDone ? '✗' : `−${BONUS_THRESHOLD - x.t.upper}`))],
+        ['Bas', ...all.map((x) => x.t.lower)],
+        ['Combinaisons réussies', ...all.map((x) => `${made(x.p.id)} / ${lowerRows.length}`)],
+        ['Yams', ...all.map((x) => yams(x.p.id))],
+        ['Cases barrées', ...all.map((x) => crossed(x.p.id))],
+        ['Cases remplies', ...all.map((x) => `${filled(x.p.id)} / ${PLAY_ROWS.length}`)],
+      ],
+    }],
+    onNewGame: newGame,
+  });
 }
 
 /* ---------- Actions ---------- */
@@ -154,6 +208,7 @@ function commit(value) {
   state.cells[pid] = state.cells[pid] || {};
   if (value == null) delete state.cells[pid][row];
   else state.cells[pid][row] = value;
+  state.log.push({ pid, row, value, fill: wasEmpty && value != null });
   if (wasEmpty && value != null) {
     // A new box filled: that player's turn is over.
     state.turnId = nextId(pid);
@@ -170,6 +225,7 @@ function commit(value) {
     const winners = state.players.filter((p) => totals(p.id).total === best).map((p) => p.name);
     sfx.win();
     toast(`🏆 ${winners.join(' et ')} : ${fmt(best)}`, 4000);
+    setTimeout(showStats, 900);
   }
   save();
   render();
@@ -196,6 +252,7 @@ function removePlayer(id) {
 function newGame() {
   if (!confirm('Effacer toutes les feuilles de score ?')) return;
   state.cells = {};
+  state.log = [];
   state.history = [];
   state.redo = [];
   state.sel = null;
@@ -399,6 +456,7 @@ function renderEntry() {
     $('#entryCalc').textContent = 'Ajoute des joueurs';
     return;
   }
+  $('#endStatsBtn').hidden = true;
   if (!state.sel) {
     const p = byId(state.turnId);
     if (state.players.every((pl) => isComplete(pl.id))) {
@@ -406,6 +464,7 @@ function renderEntry() {
       const winners = state.players.filter((pl) => totals(pl.id).total === best);
       $('#entryDot').style.background = winners[0].color;
       $('#entryName').textContent = 'Partie terminée';
+      $('#endStatsBtn').hidden = false;
       $('#entryCalc').textContent = `🏆 ${winners.map((w) => w.name).join(' et ')} : ${fmt(best)}`;
       return;
     }
@@ -471,6 +530,8 @@ $('#editBtn').addEventListener('click', () => setEditing(!editing));
 $('#doneBtn').addEventListener('click', () => setEditing(false));
 $('#addPlayerBtn').addEventListener('click', addPlayer);
 $('#newGameBtn').addEventListener('click', newGame);
+$('#statsBtn').addEventListener('click', showStats);
+$('#endStatsBtn').addEventListener('click', showStats);
 
 document.addEventListener('keydown', (e) => {
   if (editing || e.target.tagName === 'INPUT') return;
