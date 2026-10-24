@@ -28,34 +28,14 @@
     </div>
   </header>
 
-  <main id="players" class="players" aria-label="Joueurs"></main>
+  <div id="board" class="board"></div>
+  <main id="sheet" class="sheet-wrap" aria-label="Manche en cours"></main>
+  <main id="players" class="players" aria-label="Équipes" hidden></main>
 
-  <section id="playPanel" class="panel">
-    <div class="entry">
-      <span id="entryDot" class="dot"></span>
-      <div class="entry-text">
-        <div id="entryName" class="entry-name"></div>
-        <div id="entryCalc" class="entry-calc"></div>
-      </div>
-      <button id="redoBtn" class="mode-btn" type="button" hidden>↷ Rétablir</button>
-      <button id="modeBtn" class="mode-btn" type="button">Corriger</button>
-    </div>
-    <div class="keypad" id="keypad">
-      <button data-k="1">1</button>
-      <button data-k="2">2</button>
-      <button data-k="3">3</button>
-      <button data-k="back" class="fn" aria-label="Effacer">⌫</button>
-      <button data-k="4">4</button>
-      <button data-k="5">5</button>
-      <button data-k="6">6</button>
-      <button data-k="sign" class="fn" aria-label="Changer le signe">±</button>
-      <button data-k="7">7</button>
-      <button data-k="8">8</button>
-      <button data-k="9">9</button>
-      <button data-k="undo" class="fn" aria-label="Annuler">↶</button>
-      <button data-k="0" class="span2">0</button>
-      <button data-k="ok" class="ok">Valider</button>
-    </div>
+  <section id="playPanel" class="panel round-actions">
+    <button id="undoBtn" class="mode-btn" type="button" aria-label="Annuler">↶</button>
+    <button id="redoBtn" class="mode-btn" type="button" aria-label="Rétablir" hidden>↷</button>
+    <button id="validateBtn" class="wide-btn primary" type="button">Valider la manche</button>
   </section>
 
   <section id="editPanel" class="panel edit-panel" hidden>
@@ -65,14 +45,13 @@
       <span>points</span>
     </div>
     <button id="addPlayerBtn" class="wide-btn" type="button">+ Ajouter une équipe</button>
-    <button id="newGameBtn" class="wide-btn danger" type="button">Nouvelle partie (scores à 0)</button>
+    <button id="newGameBtn" class="wide-btn danger" type="button">Nouvelle partie (effacer les manches)</button>
     <button id="doneBtn" class="wide-btn primary" type="button">Jouer</button>
   </section>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script>window.GAME = { storageKey: 'scoppa-state-v1', target: 21, targetChoices: [11, 16, 21, 31], defaultName: 'Équipe', maxDigits: 3 };</script>
   <script src="common.js"></script>
-  <script src="counter.js"></script>
+  <script src="scoppa.js"></script>
 </body>
 </html>

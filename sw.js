@@ -1,6 +1,6 @@
 // Network-first service worker: always fresh when online, works offline.
-const CACHE = 'scores-v1';
-const ASSETS = ['./', 'index.html', 'dix-mille.html', 'yams.html', 'scoppa.html', 'style.css', 'common.js', 'counter.js', 'yams.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
+const CACHE = 'scores-v2';
+const ASSETS = ['./', 'index.html', 'dix-mille.html', 'yams.html', 'scoppa.html', 'style.css', 'common.js', 'counter.js', 'yams.js', 'scoppa.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(ASSETS)).then(() => self.skipWaiting()));

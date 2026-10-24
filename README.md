@@ -25,9 +25,13 @@ La page d'accueil propose trois jeux :
 
 ## Scoppa (`scoppa.html`)
 
-- Même principe que le dix-mille, par équipe ou par joueur : à la fin de chaque
-  manche, on saisit les points de chacun.
-- Score à atteindre au choix (11, 16, 21 ou 31) dans le menu *Équipes*.
+- Saisie manche par manche : pour chaque équipe, un bouton par point
+  (cartes, deniers, 7 de deniers, primiera) — un seul gagnant possible par point,
+  aucun en cas d'égalité — et un compteur −/+ pour les scopes.
+- « Valider la manche » ajoute les points au total ; les manches jouées restent
+  listées et peuvent être modifiées (✎) ou supprimées (✕).
+- Score à atteindre au choix (11, 16, 21 ou 31) dans le menu *Équipes* ; l'équipe
+  seule en tête au-delà de l'objectif gagne.
 
 ## Commun
 
