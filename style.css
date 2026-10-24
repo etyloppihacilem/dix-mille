@@ -360,6 +360,7 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
   min-width: 58px; max-width: 90px;
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
+.sheet thead th.pcol { cursor: pointer; }
 .sheet thead th.pcol.turn { background: color-mix(in srgb, var(--pc) 22%, var(--surface)); }
 .sheet td.turn { background: color-mix(in srgb, var(--pc) 9%, var(--surface)); }
 .sheet .die { font-size: 1.4rem; line-height: 1; vertical-align: -2px; }

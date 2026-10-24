@@ -131,6 +131,15 @@ function selectCell(pid, row) {
   render();
 }
 
+function setTurn(pid) {
+  if (editing || state.turnId === pid) return;
+  sfx.key();
+  state.turnId = pid;
+  state.sel = null;
+  save();
+  render();
+}
+
 // Writes `value` (null clears the cell) into the selected cell.
 function commit(value) {
   if (!state.sel) { toast('Touche d’abord une case'); return; }
@@ -239,6 +248,7 @@ function renderGrid() {
     th.className = 'pcol' + (p.id === state.turnId ? ' turn' : '');
     th.style.setProperty('--pc', p.color);
     th.textContent = (best > 0 && all[p.id].total === best ? '👑 ' : '') + p.name;
+    th.addEventListener('click', () => setTurn(p.id));
     head.append(th);
   }
 

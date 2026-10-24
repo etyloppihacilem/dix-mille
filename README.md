@@ -22,7 +22,8 @@ La page d'accueil propose trois jeux :
   face, valeur fixe du full et des suites, 5 à 30 pour brelan, carré et chance).
   `✗ Barrer` met 0, `Autre…` permet une valeur libre, `Vider` efface la case.
   Pas de pavé numérique : il n'apparaît rien tant qu'aucune case n'est choisie.
-- Le tour passe au joueur suivant dès qu'une case vide est remplie ; la colonne du
+- Le tour passe au joueur suivant dès qu'une case vide est remplie (toucher un nom
+  en haut d'une colonne choisit qui joue) ; la colonne du
   joueur dont c'est le tour est surlignée. Totaux et bonus calculés automatiquement.
 
 ## Scoppa (`scoppa.html`)
