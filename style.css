@@ -296,6 +296,22 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
   grid-auto-rows: clamp(42px, 6.4dvh, 56px);
 }
 .keypad.yams-pad button.ok { grid-column: auto; font-size: 1.5rem; }
+.combo-pad { display: flex; flex-direction: column; gap: 6px; padding: 0 2px 4px; }
+.combo-row {
+  display: grid;
+  grid-template-columns: 62px repeat(6, 1fr);
+  gap: 5px; align-items: center;
+}
+.combo-label { font-size: .75rem; font-weight: 600; color: var(--muted); line-height: 1.1; }
+.combo-die {
+  height: 46px; border-radius: 10px;
+  background: var(--surface); box-shadow: var(--shadow);
+  font-size: 2rem; line-height: 1;
+  border: 2px solid transparent;
+}
+.combo-die.on { background: var(--accent); color: var(--accent-text); }
+.combo-ok { margin-top: 2px; padding: 12px; }
+.combo-ok:disabled { opacity: .45; }
 .quick-values.wide { grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); }
 .quick-values .chip.two-line {
   display: flex; flex-direction: column; align-items: center; gap: 2px;

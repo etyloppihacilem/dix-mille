@@ -13,8 +13,8 @@ const ROWS = [
   ...FACES.map((glyph, i) => ({ key: String(i + 1), label: i === 0 ? 'As' : String(i + 1), die: glyph, face: i + 1 })),
   { key: 'upper', label: 'Total haut', calc: true },
   { key: 'bonus', label: `Bonus (${BONUS_THRESHOLD})`, calc: true },
-  { key: 'brelan', label: 'Brelan', hint: '3 × la valeur', mult: 3 },
-  { key: 'carre', label: 'Carré', hint: '4 × la valeur', mult: 4 },
+  { key: 'brelan', label: 'Brelan', hint: 'total des 5 dés', combo: 3 },
+  { key: 'carre', label: 'Carré', hint: 'total des 5 dés', combo: 4 },
   { key: 'full', label: 'Full', fixed: 25 },
   { key: 'petite', label: 'Petite suite', fixed: 30 },
   { key: 'grande', label: 'Grande suite', fixed: 40 },
@@ -49,6 +49,7 @@ function loadState() {
 let state = loadState();
 let editing = false;
 let typed = ''; // digits typed on the keypad for a `typed` row
+let pick = [];  // faces picked for a `combo` row: [combination, other dice…]
 
 function save() {
   const { sel, ...rest } = state;
@@ -130,6 +131,7 @@ function selectCell(pid, row) {
   const same = state.sel && state.sel.pid === pid && state.sel.row === row;
   state.sel = same ? null : { pid, row };
   typed = '';
+  pick = [];
   render();
 }
 
@@ -161,6 +163,7 @@ function commit(value) {
   }
   state.sel = null;
   typed = '';
+  pick = [];
 
   if (!wasDone && state.players.every((p) => isComplete(p.id))) {
     const best = Math.max(...state.players.map((p) => totals(p.id).total));
@@ -304,12 +307,54 @@ function quickValues(r) {
     // How many dice show the face.
     return [1, 2, 3, 4, 5].map((n) => ({ main: `${n} ${n > 1 ? 'dés' : 'dé'}`, sub: `= ${n * r.face}`, value: n * r.face }));
   }
-  if (r.mult) {
-    // Which face forms the combination.
-    return FACES.map((glyph, i) => ({ main: glyph, sub: `= ${r.mult * (i + 1)}`, value: r.mult * (i + 1), die: true }));
-  }
   if (r.fixed) return [{ main: String(r.fixed), value: r.fixed }];
   return [];
+}
+
+// Brelan / carré: the combination counts `combo` times, plus the other dice.
+const comboLevels = (r) => 1 + 5 - r.combo;
+const comboDone = (r) => pick.filter(Boolean).length === comboLevels(r);
+const comboValue = (r) => r.combo * pick[0] + pick.slice(1).reduce((t, v) => t + v, 0);
+
+function pickFace(level, face) {
+  sfx.key();
+  pick[level] = pick[level] === face ? undefined : face;
+  render();
+}
+
+function renderCombo(box, r) {
+  box.className = 'combo-pad';
+  for (let level = 0; level < comboLevels(r); level++) {
+    const row = document.createElement('div');
+    row.className = 'combo-row';
+    row.append(Object.assign(document.createElement('span'), {
+      className: 'combo-label',
+      textContent: level === 0 ? `${r.label} de` : 'Autre dé',
+    }));
+    FACES.forEach((glyph, i) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'combo-die' + (pick[level] === i + 1 ? ' on' : '') + (level === 0 ? ' main' : '');
+      b.textContent = glyph;
+      b.setAttribute('aria-label', `${level === 0 ? r.label : 'Autre dé'} : ${i + 1}`);
+      b.addEventListener('click', () => pickFace(level, i + 1));
+      row.append(b);
+    });
+    box.append(row);
+  }
+  const ok = document.createElement('button');
+  ok.type = 'button';
+  ok.className = 'wide-btn primary combo-ok';
+  ok.disabled = !comboDone(r);
+  ok.textContent = comboDone(r) ? `Valider · ${comboValue(r)} pts` : 'Choisis les dés';
+  ok.addEventListener('click', () => { if (comboDone(r)) commit(comboValue(r)); });
+  box.append(ok);
+}
+
+function comboText(r) {
+  const parts = [pick[0] ? `${r.combo}×${pick[0]}` : `${r.combo}×?`];
+  for (let i = 1; i < comboLevels(r); i++) parts.push(pick[i] ?? '?');
+  return parts.join(' + ') + (comboDone(r) ? ` = ${comboValue(r)}` : '');
 }
 
 function typeKey(k) {
@@ -372,7 +417,8 @@ function renderEntry() {
   const current = cell(p.id, r.key);
   $('#entryDot').style.background = p.color;
   $('#entryName').textContent = `${p.name} · ${r.label}${r.hint ? ` (${r.hint})` : ''}`;
-  $('#entryCalc').textContent = typed ? `${typed} pts`
+  $('#entryCalc').textContent = r.combo && pick.some(Boolean) ? comboText(r)
+    : typed ? `${typed} pts`
     : current == null ? (r.typed ? 'Tape le total' : 'Choisis les points')
     : `Actuel : ${current === 0 ? '✗' : current}`;
 
@@ -387,7 +433,7 @@ function renderEntry() {
   chip(actions, '✗ Barrer', () => commit(0), 'cross' + (current === 0 ? ' on' : ''));
   if (!r.typed) chip(actions, 'Autre…', askValue, 'clear');
   if (current != null) chip(actions, 'Vider', () => commit(null), 'clear');
-  chip(actions, 'Fermer', () => { state.sel = null; render(); }, 'clear');
+  chip(actions, 'Fermer', () => { state.sel = null; pick = []; render(); }, 'clear');
   if (r.typed) {
     quick.className = 'keypad yams-pad';
     for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'ok']) {
@@ -401,7 +447,8 @@ function renderEntry() {
     }
     return;
   }
-  quick.className = 'quick-values' + (r.face || r.mult ? ' wide' : '');
+  if (r.combo) { renderCombo(quick, r); return; }
+  quick.className = 'quick-values' + (r.face ? ' wide' : '');
   for (const q of quickValues(r)) {
     const b = document.createElement('button');
     b.type = 'button';
