@@ -83,6 +83,8 @@ button {
 }
 .icon-btn.on { color: var(--win); }
 #fsBtn.on { color: var(--accent); }
+#soundBtn { font-size: 1.25rem; color: var(--accent); }
+#soundBtn.off { color: var(--muted); text-decoration: line-through; opacity: .6; }
 .pill-btn {
   padding: 8px 14px; border-radius: 999px;
   background: var(--surface); box-shadow: var(--shadow);

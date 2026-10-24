@@ -99,13 +99,16 @@ function press(k) {
   if (editing || !state.players.length) return;
   switch (k) {
     case 'back':
+      sfx.key();
       if (state.input) state.input = state.input.slice(0, -1);
       else state.negative = false;
       break;
     case 'sign':
+      sfx.key();
       state.negative = !state.negative;
       break;
     case 'undo':
+      if (state.history.length) sfx.undo();
       undo();
       break;
     case 'ok':
@@ -113,6 +116,7 @@ function press(k) {
       break;
     default:
       if (/^\d+$/.test(k)) {
+        sfx.key();
         let s = state.input + k;
         s = s.replace(/^0+(?=\d)/, '');
         if (s.length <= MAX_DIGITS) state.input = s;
@@ -131,41 +135,62 @@ function validate() {
     p.score = inputValue();
     p.last = null;
     state.mode = 'add';
+    sfx.set();
     state.selectedId = state.turnId;
     toast(`Score de ${p.name} corrigé`);
   } else {
     snapshot();
     const v = inputValue();
+    const before = p.score;
     p.score += v;
     p.last = v;
+    if (before < WIN_SCORE && p.score >= WIN_SCORE) sfx.win();
+    else if (v === 0) sfx.zero();
+    else sfx.add();
     state.turnId = nextId(p.id);
     state.selectedId = state.turnId;
   }
   clearInput();
   scrollToSelected = true;
-  beep();
 }
 
-/* ---------- Beep ---------- */
+/* ---------- Sound effects ---------- */
 
 let audioCtx = null;
-function beep() {
+let soundOn = true;
+try { soundOn = localStorage.getItem('dix-mille-sound') !== '0'; } catch (e) { /* ignore */ }
+
+// Plays a sequence of soft notes: [frequency, start offset (s), duration (s)].
+function tones(notes, volume = 0.07, type = 'sine') {
+  if (!soundOn) return;
   try {
     audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === 'suspended') audioCtx.resume();
-    const t = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.0001, t);
-    gain.gain.exponentialRampToValueAtTime(0.3, t + 0.01);
-    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
-    osc.connect(gain).connect(audioCtx.destination);
-    osc.start(t);
-    osc.stop(t + 0.13);
+    const now = audioCtx.currentTime;
+    for (const [freq, at, dur] of notes) {
+      const t = now + at;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(volume, t + 0.008);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(gain).connect(audioCtx.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
   } catch (e) { /* no audio available */ }
 }
+
+const sfx = {
+  key: () => tones([[1400, 0, 0.03]], 0.025, 'triangle'),
+  add: () => tones([[660, 0, 0.09], [880, 0.07, 0.14]]),
+  zero: () => tones([[392, 0, 0.1], [330, 0.08, 0.16]], 0.06),
+  set: () => tones([[587, 0, 0.14]], 0.06),
+  undo: () => tones([[880, 0, 0.08], [587, 0.06, 0.12]], 0.05),
+  win: () => tones([[523, 0, 0.12], [659, 0.09, 0.12], [784, 0.18, 0.12], [1047, 0.27, 0.3]], 0.07),
+};
 
 function selectPlayer(id, mode) {
   if (state.selectedId !== id || state.mode !== mode) clearInput();
@@ -544,6 +569,20 @@ $('#fsBtn').addEventListener('click', async () => {
 document.addEventListener('fullscreenchange', updateFsBtn);
 document.addEventListener('webkitfullscreenchange', updateFsBtn);
 updateFsBtn();
+
+function updateSoundBtn() {
+  const btn = $('#soundBtn');
+  btn.classList.toggle('off', !soundOn);
+  btn.title = soundOn ? 'Couper le son' : 'Activer le son';
+}
+
+$('#soundBtn').addEventListener('click', () => {
+  soundOn = !soundOn;
+  try { localStorage.setItem('dix-mille-sound', soundOn ? '1' : '0'); } catch (e) { /* ignore */ }
+  updateSoundBtn();
+  if (soundOn) sfx.add();
+});
+updateSoundBtn();
 
 /* ---------- Wiring ---------- */
 

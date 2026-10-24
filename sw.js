@@ -1,5 +1,5 @@
 // Network-first service worker: always fresh when online, works offline.
-const CACHE = 'dix-mille-v4';
+const CACHE = 'dix-mille-v5';
 const ASSETS = ['./', 'index.html', 'style.css', 'app.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {
