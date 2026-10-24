@@ -1,7 +1,7 @@
 {
-  "name": "Dix-mille",
-  "short_name": "Dix-mille",
-  "description": "Feuille de score pour le jeu de dés dix-mille",
+  "name": "Feuilles de score",
+  "short_name": "Scores",
+  "description": "Feuilles de score pour le dix-mille, le yams et la scoppa",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
