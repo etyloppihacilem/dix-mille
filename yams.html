@@ -38,25 +38,11 @@
         <div id="entryName" class="entry-name"></div>
         <div id="entryCalc" class="entry-calc"></div>
       </div>
-      <button id="redoBtn" class="mode-btn" type="button" hidden>↷ Rétablir</button>
+      <button id="undoBtn" class="mode-btn" type="button" aria-label="Annuler" hidden>↶</button>
+      <button id="redoBtn" class="mode-btn" type="button" aria-label="Rétablir" hidden>↷</button>
     </div>
-    <div id="quick" class="chips quick"></div>
-    <div class="keypad compact" id="keypad">
-      <button data-k="1">1</button>
-      <button data-k="2">2</button>
-      <button data-k="3">3</button>
-      <button data-k="back" class="fn" aria-label="Effacer">⌫</button>
-      <button data-k="4">4</button>
-      <button data-k="5">5</button>
-      <button data-k="6">6</button>
-      <button data-k="cross" class="fn cross" aria-label="Barrer">✗</button>
-      <button data-k="7">7</button>
-      <button data-k="8">8</button>
-      <button data-k="9">9</button>
-      <button data-k="undo" class="fn" aria-label="Annuler">↶</button>
-      <button data-k="0" class="span2">0</button>
-      <button data-k="ok" class="ok">Valider</button>
-    </div>
+    <div id="quickActions" class="chips quick-actions"></div>
+    <div id="quick" class="quick-values"></div>
   </section>
 
   <section id="editPanel" class="panel edit-panel" hidden>

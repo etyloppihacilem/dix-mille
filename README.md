@@ -18,8 +18,10 @@ La page d'accueil propose trois jeux :
 
 - Grille classique : As à 6, bonus de 35 points à partir de 63 en haut,
   brelan, carré, full (25), petite suite (30), grande suite (40), yams (50), chance.
-- Toucher une case, puis une valeur rapide (multiples de la face, valeur fixe du full…),
-  ou taper la valeur au pavé et **Valider**. `✗` barre la case (0 point).
+- Toucher une case : des bulles proposent toutes les valeurs possibles (multiples de la
+  face, valeur fixe du full et des suites, 5 à 30 pour brelan, carré et chance).
+  `✗ Barrer` met 0, `Autre…` permet une valeur libre, `Vider` efface la case.
+  Pas de pavé numérique : il n'apparaît rien tant qu'aucune case n'est choisie.
 - Le tour passe au joueur suivant dès qu'une case vide est remplie ; la colonne du
   joueur dont c'est le tour est surlignée. Totaux et bonus calculés automatiquement.
 

@@ -35,7 +35,6 @@ function defaultState() {
     cells: {},     // { playerId: { rowKey: points } }
     turnId: players[0].id,
     sel: null,     // { pid, row } cell being filled
-    input: '',
     history: [],
     redo: [],
   };
@@ -43,7 +42,7 @@ function defaultState() {
 
 function loadState() {
   const s = loadJSON(STORAGE_KEY);
-  if (s && Array.isArray(s.players)) return { ...defaultState(), ...s, input: '', sel: null };
+  if (s && Array.isArray(s.players)) return { ...defaultState(), ...s, sel: null };
   return defaultState();
 }
 
@@ -51,7 +50,7 @@ let state = loadState();
 let editing = false;
 
 function save() {
-  const { input, sel, ...rest } = state;
+  const { sel, ...rest } = state;
   saveJSON(STORAGE_KEY, rest);
 }
 
@@ -96,7 +95,6 @@ function restore(h) {
   state.cells = h.cells;
   state.turnId = h.turnId;
   state.sel = null;
-  state.input = '';
   ensureIds();
 }
 
@@ -130,7 +128,6 @@ function selectCell(pid, row) {
   if (editing) return;
   const same = state.sel && state.sel.pid === pid && state.sel.row === row;
   state.sel = same ? null : { pid, row };
-  state.input = '';
   render();
 }
 
@@ -152,43 +149,12 @@ function commit(value) {
     sfx.set();
   }
   state.sel = null;
-  state.input = '';
 
   if (!wasDone && state.players.every((p) => isComplete(p.id))) {
     const best = Math.max(...state.players.map((p) => totals(p.id).total));
     const winners = state.players.filter((p) => totals(p.id).total === best).map((p) => p.name);
     sfx.win();
     toast(`🏆 ${winners.join(' et ')} : ${fmt(best)}`, 4000);
-  }
-  save();
-  render();
-}
-
-function press(k) {
-  if (editing || !state.players.length) return;
-  switch (k) {
-    case 'back':
-      sfx.key();
-      state.input = state.input.slice(0, -1);
-      break;
-    case 'cross':
-      commit(0);
-      return;
-    case 'undo':
-      undo();
-      break;
-    case 'ok':
-      if (!state.sel) { toast('Touche d’abord une case'); return; }
-      if (state.input === '') { toast('Tape une valeur ou ✗ pour barrer'); return; }
-      commit(parseInt(state.input, 10));
-      return;
-    default:
-      if (/^\d$/.test(k)) {
-        if (!state.sel) { toast('Touche d’abord une case'); return; }
-        sfx.key();
-        const s = (state.input + k).replace(/^0+(?=\d)/, '');
-        if (s.length <= 3) state.input = s;
-      }
   }
   save();
   render();
@@ -218,7 +184,6 @@ function newGame() {
   state.history = [];
   state.redo = [];
   state.sel = null;
-  state.input = '';
   state.turnId = state.players[0]?.id ?? null;
   save();
   render();
@@ -229,7 +194,6 @@ function setEditing(on) {
   editing = on;
   leaveEditor();
   state.sel = null;
-  state.input = '';
   if (!on) {
     for (const p of state.players) p.name = p.name.trim() || 'Joueur';
     save();
@@ -311,9 +275,7 @@ function renderGrid() {
       const v = cell(p.id, r.key);
       const selected = state.sel && state.sel.pid === p.id && state.sel.row === r.key;
       td.className += ' box' + (v === 0 ? ' crossed' : '') + (selected ? ' selected' : '');
-      if (selected && state.input) td.textContent = state.input;
-      else td.textContent = v == null ? '' : v === 0 ? '✗' : v;
-      if (selected) td.classList.add('caret');
+      td.textContent = v == null ? '' : v === 0 ? '✗' : v;
       td.addEventListener('click', () => selectCell(p.id, r.key));
     }
   }
@@ -323,16 +285,29 @@ function renderGrid() {
   if (sel) sel.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
+// Every score the combination can be worth (besides 0 when crossed out).
 function quickValues(r) {
   if (r.face) return [1, 2, 3, 4, 5].map((n) => n * r.face);
   if (r.fixed) return [r.fixed];
-  return [];
+  return Array.from({ length: 26 }, (_, i) => i + 5); // five dice: 5 to 30
+}
+
+function askValue() {
+  const v = prompt('Nombre de points :');
+  if (v == null || v.trim() === '') return;
+  const n = parseInt(v, 10);
+  if (Number.isNaN(n) || n < 0) { toast('Valeur invalide'); return; }
+  commit(n);
 }
 
 function renderEntry() {
   const quick = $('#quick');
+  const actions = $('#quickActions');
   quick.textContent = '';
+  actions.textContent = '';
   $('#redoBtn').hidden = !state.redo.length;
+  $('#undoBtn').hidden = !state.history.length;
+  $('#playPanel').classList.toggle('choosing', !!state.sel);
 
   if (!state.players.length) {
     $('#entryDot').style.background = '';
@@ -361,29 +336,26 @@ function renderEntry() {
   const current = cell(p.id, r.key);
   $('#entryDot').style.background = p.color;
   $('#entryName').textContent = `${p.name} · ${r.label}${r.hint ? ` (${r.hint})` : ''}`;
-  $('#entryCalc').textContent = state.input
-    ? `${state.input} pts`
-    : current == null ? '…' : `Actuel : ${current === 0 ? '✗' : current}`;
+  $('#entryCalc').textContent = current == null ? 'Choisis les points' : `Actuel : ${current === 0 ? '✗' : current}`;
 
-  const chip = (text, value, cls = '') => {
+  const chip = (box, text, onClick, cls = '') => {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip ' + cls;
     b.textContent = text;
-    b.addEventListener('click', () => commit(value));
-    quick.append(b);
+    b.addEventListener('click', onClick);
+    box.append(b);
   };
-  chip('✗ Barrer', 0, 'cross');
-  for (const v of quickValues(r)) chip(String(v), v);
-  if (current != null) chip('Vider', null, 'clear');
+  chip(actions, '✗ Barrer', () => commit(0), 'cross' + (current === 0 ? ' on' : ''));
+  chip(actions, 'Autre…', askValue, 'clear');
+  if (current != null) chip(actions, 'Vider', () => commit(null), 'clear');
+  chip(actions, 'Fermer', () => { state.sel = null; render(); }, 'clear');
+  for (const v of quickValues(r)) chip(quick, String(v), () => commit(v), v === current ? 'on' : '');
 }
 
 /* ---------- Wiring ---------- */
 
-$('#keypad').addEventListener('click', (e) => {
-  const b = e.target.closest('button[data-k]');
-  if (b) press(b.dataset.k);
-});
+$('#undoBtn').addEventListener('click', () => { undo(); save(); render(); });
 $('#redoBtn').addEventListener('click', () => { redo(); save(); render(); });
 $('#editBtn').addEventListener('click', () => setEditing(!editing));
 $('#doneBtn').addEventListener('click', () => setEditing(false));
@@ -392,11 +364,8 @@ $('#newGameBtn').addEventListener('click', newGame);
 
 document.addEventListener('keydown', (e) => {
   if (editing || e.target.tagName === 'INPUT') return;
-  if (/^[0-9]$/.test(e.key)) press(e.key);
-  else if (e.key === 'Backspace') press('back');
-  else if (e.key === 'Enter') press('ok');
-  else if (e.key === 'Escape') { state.sel = null; state.input = ''; render(); }
-  else if ((e.ctrlKey || e.metaKey) && e.key === 'z') press('undo');
+  if (e.key === 'Escape') { state.sel = null; render(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key === 'z') { undo(); save(); render(); }
   else return;
   e.preventDefault();
 });

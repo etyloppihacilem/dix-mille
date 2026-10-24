@@ -282,7 +282,16 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
 .chip.on { background: var(--accent); color: var(--accent-text); }
 .chip.cross { color: var(--danger); }
 .chip.clear { color: var(--muted); }
-.chips.quick { padding: 0 4px 8px; min-height: 44px; }
+.quick-actions { padding: 0 2px 8px; }
+.quick-actions:empty, .quick-values:empty { display: none; }
+.quick-values {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(46px, 1fr));
+  gap: 6px;
+  padding: 0 2px 4px;
+}
+.quick-values .chip { min-width: 0; padding: 10px 0; font-size: 1.05rem; }
+.entry .mode-btn[aria-label] { font-size: 1.3rem; padding: 6px 12px; }
 .target-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
   padding: 4px 4px 6px; font-weight: 600;
@@ -361,13 +370,6 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
   outline: 3px solid var(--pc);
   outline-offset: -3px;
   border-radius: 6px;
-}
-.sheet td.selected.caret::after {
-  content: "";
-  display: inline-block; vertical-align: middle;
-  width: 2px; height: 1em; margin-left: 1px;
-  background: var(--text);
-  animation: blink 1s steps(1) infinite;
 }
 .sheet tr.calc th, .sheet tr.calc td {
   background: var(--key-fn);
