@@ -13,8 +13,8 @@ const ROWS = [
   ...FACES.map((glyph, i) => ({ key: String(i + 1), label: i === 0 ? 'As' : String(i + 1), die: glyph, face: i + 1 })),
   { key: 'upper', label: 'Total haut', calc: true },
   { key: 'bonus', label: `Bonus (${BONUS_THRESHOLD})`, calc: true },
-  { key: 'brelan', label: 'Brelan', hint: 'total des dés' },
-  { key: 'carre', label: 'Carré', hint: 'total des dés' },
+  { key: 'brelan', label: 'Brelan', hint: '3 × la valeur', mult: 3 },
+  { key: 'carre', label: 'Carré', hint: '4 × la valeur', mult: 4 },
   { key: 'full', label: 'Full', fixed: 25 },
   { key: 'petite', label: 'Petite suite', fixed: 30 },
   { key: 'grande', label: 'Grande suite', fixed: 40 },
@@ -295,11 +295,19 @@ function renderGrid() {
   if (sel) sel.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-// Every score the combination can be worth (besides 0 when crossed out).
+// Every way to score the row: { main, sub, value }.
 function quickValues(r) {
-  if (r.face) return [1, 2, 3, 4, 5].map((n) => n * r.face);
-  if (r.fixed) return [r.fixed];
-  return Array.from({ length: 26 }, (_, i) => i + 5); // five dice: 5 to 30
+  if (r.face) {
+    // How many dice show the face.
+    return [1, 2, 3, 4, 5].map((n) => ({ main: `${n} ${n > 1 ? 'dés' : 'dé'}`, sub: `= ${n * r.face}`, value: n * r.face }));
+  }
+  if (r.mult) {
+    // Which face forms the combination.
+    return FACES.map((glyph, i) => ({ main: glyph, sub: `= ${r.mult * (i + 1)}`, value: r.mult * (i + 1), die: true }));
+  }
+  if (r.fixed) return [{ main: String(r.fixed), value: r.fixed }];
+  // Chance: total of five dice.
+  return Array.from({ length: 26 }, (_, i) => ({ main: String(i + 5), value: i + 5 }));
 }
 
 function askValue() {
@@ -360,7 +368,16 @@ function renderEntry() {
   chip(actions, 'Autre…', askValue, 'clear');
   if (current != null) chip(actions, 'Vider', () => commit(null), 'clear');
   chip(actions, 'Fermer', () => { state.sel = null; render(); }, 'clear');
-  for (const v of quickValues(r)) chip(quick, String(v), () => commit(v), v === current ? 'on' : '');
+  quick.className = 'quick-values' + (r.face || r.mult ? ' wide' : '');
+  for (const q of quickValues(r)) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (q.sub ? ' two-line' : '') + (q.value === current ? ' on' : '');
+    b.append(Object.assign(document.createElement('span'), { className: q.die ? 'chip-die' : 'chip-main', textContent: q.main }));
+    if (q.sub) b.append(Object.assign(document.createElement('span'), { className: 'chip-sub', textContent: q.sub }));
+    b.addEventListener('click', () => commit(q.value));
+    quick.append(b);
+  }
 }
 
 /* ---------- Wiring ---------- */

@@ -291,6 +291,14 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
   padding: 0 2px 4px;
 }
 .quick-values .chip { min-width: 0; padding: 10px 0; font-size: 1.05rem; }
+.quick-values.wide { grid-template-columns: repeat(auto-fit, minmax(48px, 1fr)); }
+.quick-values .chip.two-line {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 8px 0; border-radius: 14px;
+}
+.chip-die { font-size: 2rem; line-height: 1; }
+.chip-main { font-size: 1.05rem; }
+.chip-sub { font-size: .8rem; font-weight: 500; opacity: .75; }
 .entry .mode-btn[aria-label] { font-size: 1.3rem; padding: 6px 12px; }
 .target-row {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;

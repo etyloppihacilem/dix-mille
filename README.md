@@ -16,12 +16,12 @@ La page d'accueil propose trois jeux :
 
 ## Yams (`yams.html`)
 
-- Grille classique : As à 6, bonus de 35 points à partir de 63 en haut,
-  brelan, carré, full (25), petite suite (30), grande suite (40), yams (50), chance.
-- Toucher une case : des bulles proposent toutes les valeurs possibles (multiples de la
-  face, valeur fixe du full et des suites, 5 à 30 pour brelan, carré et chance).
-  `✗ Barrer` met 0, `Autre…` permet une valeur libre, `Vider` efface la case.
-  Pas de pavé numérique : il n'apparaît rien tant qu'aucune case n'est choisie.
+- Grille : As à 6, bonus de 35 points à partir de 63 en haut, brelan (3 × la valeur),
+  carré (4 × la valeur), full (25), petite suite (30), grande suite (40), yams (50), chance.
+- Toucher une case : des bulles proposent les choix possibles — nombre de dés (1 à 5)
+  pour As à 6, valeur du dé pour le brelan et le carré, valeur fixe pour le full, les
+  suites et le yams, 5 à 30 pour la chance. `✗ Barrer` met 0, `Autre…` permet une
+  valeur libre, `Vider` efface la case.
 - Le tour passe au joueur suivant dès qu'une case vide est remplie (toucher un nom
   en haut d'une colonne choisit qui joue) ; la colonne du
   joueur dont c'est le tour est surlignée. Totaux et bonus calculés automatiquement.
