@@ -1,5 +1,5 @@
 // Network-first service worker: always fresh when online, works offline.
-const CACHE = 'scores-v12';
+const CACHE = 'scores-v13';
 const ASSETS = ['./', 'index.html', 'dix-mille.html', 'yams.html', 'scoppa.html', 'style.css', 'common.js', 'stats.js', 'counter.js', 'yams.js', 'scoppa.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-180.png', 'icons/icon-192.png', 'icons/icon-512.png'];
 
 self.addEventListener('install', (e) => {

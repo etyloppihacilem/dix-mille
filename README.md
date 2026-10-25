@@ -30,8 +30,8 @@ La page d'accueil propose trois jeux :
 ## Scoppa (`scoppa.html`)
 
 - Saisie manche par manche : pour chaque équipe, un bouton par point
-  (cartes, deniers, 7 de deniers, primiera) — un seul gagnant possible par point,
-  aucun en cas d'égalité — et un compteur −/+ pour les scopes.
+  (carte, denari, settebello, primiera) — un seul gagnant possible par point,
+  aucun en cas d'égalité — et un compteur −/+ pour les scope.
 - « Valider la manche » ajoute les points au total ; les manches jouées restent
   listées et peuvent être modifiées (✎) ou supprimées (✕).
 - Score à atteindre au choix (11, 16, 21 ou 31) dans le menu *Équipes* ; l'équipe

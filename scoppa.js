@@ -6,10 +6,10 @@
 const STORAGE_KEY = 'scoppa-state-v1';
 const TARGETS = [11, 16, 21, 31];
 const POINTS = [
-  { key: 'cartes', label: 'Cartes', hint: 'le plus de cartes' },
-  { key: 'deniers', label: 'Deniers', hint: 'le plus de deniers' },
-  { key: 'settebello', label: '7 de deniers', hint: 'le settebellu' },
-  { key: 'primiera', label: 'Primiera', hint: 'la meilleure prime' },
+  { key: 'cartes', label: 'Carte', hint: 'le plus de cartes' },
+  { key: 'deniers', label: 'Denari', hint: 'le plus de denari' },
+  { key: 'settebello', label: 'Settebello', hint: 'le 7 de denari' },
+  { key: 'primiera', label: 'Primiera', hint: 'la meilleure primiera' },
 ];
 
 /* ---------- State ---------- */
@@ -139,7 +139,7 @@ function showStats() {
         ['Manches gagnées', ...teams.map((p) => won(p.id))],
         ['Meilleure manche', ...teams.map((p) => bestManche(p.id))],
         ...POINTS.map((pt) => [pt.label, ...teams.map((p) => count(p.id, pt.key))]),
-        ['Scopes', ...teams.map((p) => scopes(p.id))],
+        ['Scope', ...teams.map((p) => scopes(p.id))],
       ],
     }],
     onNewGame: newGame,
@@ -367,7 +367,7 @@ function renderSheet() {
   }
 
   const scopeLabel = el('div', 'pt-label');
-  scopeLabel.append(el('strong', '', 'Scopes'), el('span', '', '1 point chacune'));
+  scopeLabel.append(el('strong', '', 'Scope'), el('span', '', '1 point chacune'));
   grid.append(scopeLabel);
   for (const p of teams) {
     const n = m.scopes[p.id] ?? 0;

@@ -54,7 +54,7 @@ body {
   touch-action: manipulation;
   user-select: none;
   -webkit-user-select: none;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  padding: 0 env(safe-area-inset-right) 0 env(safe-area-inset-left);
 }
 
 button {
@@ -73,8 +73,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
+  padding: calc(8px + env(safe-area-inset-top)) 12px 8px;
   flex: none;
+  /* Opaque, full-width and pinned to the top: iOS 26 then takes this color
+     for the status bar area instead of blurring the content beneath it. */
+  position: sticky; top: 0; z-index: 5;
+  background: var(--bg);
 }
 .topbar h1 { font-size: 1.15rem; margin: 0; letter-spacing: .02em; }
 .title { display: flex; align-items: center; gap: 6px; min-width: 0; }
