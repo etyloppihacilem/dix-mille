@@ -32,6 +32,10 @@ La page d'accueil propose trois jeux :
 - Saisie manche par manche : pour chaque équipe, un bouton par point
   (carte, denari, settebello, primiera) — un seul gagnant possible par point,
   aucun en cas d'égalité — et un compteur −/+ pour les scope.
+- Bouton « 🧮 Calculer » sur la primiera : pour chaque équipe, on touche la meilleure
+  carte de chaque couleur (7 = 21, 6 = 18, 1 = 16, 5 = 15, 4 = 14, 3 = 13, 2 = 12,
+  têtes = 10) ; le meilleur total gagne la primiera (une équipe à qui il manque une
+  couleur ne peut pas la gagner, égalité = personne).
 - « Valider la manche » ajoute les points au total ; les manches jouées restent
   listées et peuvent être modifiées (✎) ou supprimées (✕).
 - Score à atteindre au choix (11, 16, 21 ou 31) dans le menu *Équipes* ; l'équipe

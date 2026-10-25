@@ -148,6 +148,105 @@ function showStats() {
 
 /* ---------- Actions ---------- */
 
+/* ---------- Primiera calculator ---------- */
+
+// Best card of each suit: 7 = 21, 6 = 18, 1 = 16, 5 = 15 … 2 = 12, heads = 10.
+const PRIM_CARDS = [['7', 21], ['6', 18], ['1', 16], ['5', 15], ['4', 14], ['3', 13], ['2', 12], ['Tête', 10]];
+const SUITS = ['Denari', 'Coppe', 'Spade', 'Bastoni'];
+let primTeam = null;
+
+const primOf = (pid) => {
+  state.current.prim = state.current.prim || {};
+  return (state.current.prim[pid] = state.current.prim[pid] || [null, null, null, null]);
+};
+const primComplete = (pid) => primOf(pid).every((v) => v != null);
+const primTotal = (pid) => primOf(pid).reduce((t, v) => t + (v ?? 0), 0);
+
+// A team missing a suit has no primiera; the best complete total wins, a tie gives it to nobody.
+function primWinner() {
+  const ranked = state.players.filter((p) => primComplete(p.id)).sort((a, b) => primTotal(b.id) - primTotal(a.id));
+  if (!ranked.length) return { winner: null, why: 'Choisis la meilleure carte de chaque couleur.' };
+  if (ranked.length > 1 && primTotal(ranked[0].id) === primTotal(ranked[1].id)) {
+    return { winner: null, why: `Égalité à ${primTotal(ranked[0].id)} : personne ne marque.` };
+  }
+  return { winner: ranked[0], why: `${ranked[0].name} : ${primTotal(ranked[0].id)} points` };
+}
+
+function openPrimiera() {
+  primTeam = primTeam && byId(primTeam) ? primTeam : state.players[0]?.id;
+  renderPrimiera();
+}
+
+function renderPrimiera() {
+  closeStats();
+  const overlay = el('div', 'stats-overlay');
+  overlay.id = 'statsOverlay';
+  const sheet = el('div', 'stats-sheet prim-sheet');
+  sheet.setAttribute('role', 'dialog');
+  sheet.setAttribute('aria-label', 'Calcul de la primiera');
+
+  const head = el('div', 'stats-head');
+  const close = el('button', 'icon-btn', '✕');
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Fermer');
+  close.addEventListener('click', closeStats);
+  head.append(el('h2', '', 'Primiera'), close);
+  sheet.append(head, el('p', 'stats-note', 'Pour chaque couleur, touche la meilleure carte de l’équipe.'));
+
+  const tabs = el('div', 'prim-tabs');
+  for (const p of state.players) {
+    const t = el('button', 'prim-tab' + (p.id === primTeam ? ' on' : ''));
+    t.type = 'button';
+    t.style.setProperty('--pc', p.color);
+    t.append(el('span', 'prim-tab-name', p.name), el('strong', '', primComplete(p.id) ? primTotal(p.id) : `${primTotal(p.id)}…`));
+    t.addEventListener('click', () => { primTeam = p.id; renderPrimiera(); });
+    tabs.append(t);
+  }
+  sheet.append(tabs);
+
+  const cards = primOf(primTeam);
+  SUITS.forEach((suit, i) => {
+    const row = el('div', 'prim-row');
+    row.append(el('span', 'prim-suit', suit));
+    for (const [label, value] of PRIM_CARDS) {
+      const b = el('button', 'prim-card' + (cards[i] === value ? ' on' : ''));
+      b.type = 'button';
+      b.append(el('span', 'prim-card-label' + (label.length > 1 ? ' long' : ''), label), el('span', 'prim-card-value', value));
+      b.setAttribute('aria-label', `${suit} : ${label}, ${value} points`);
+      b.addEventListener('click', () => {
+        sfx.key();
+        cards[i] = cards[i] === value ? null : value;
+        save();
+        renderPrimiera();
+      });
+      row.append(b);
+    }
+    sheet.append(row);
+  });
+
+  const { winner, why } = primWinner();
+  sheet.append(el('p', 'stats-headline prim-result', why));
+
+  const actions = el('div', 'stats-actions');
+  const apply = el('button', 'wide-btn primary', winner ? `Donner la primiera à ${winner.name}` : 'Personne ne marque la primiera');
+  apply.type = 'button';
+  apply.disabled = !state.players.some((p) => primComplete(p.id));
+  apply.addEventListener('click', () => {
+    closeStats();
+    sfx.key();
+    change(() => { state.current.points.primiera = winner ? winner.id : null; });
+  });
+  const reset = el('button', 'wide-btn', 'Effacer les cartes');
+  reset.type = 'button';
+  reset.addEventListener('click', () => { state.current.prim = {}; save(); renderPrimiera(); });
+  actions.append(apply, reset);
+  sheet.append(actions);
+
+  overlay.append(sheet);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeStats(); });
+  document.body.append(overlay);
+}
+
 function togglePoint(key, pid) {
   sfx.key();
   change(() => {
@@ -190,7 +289,7 @@ function editManche(i) {
       !confirm('Abandonner les points saisis pour la manche en cours ?')) return;
   change(() => {
     const m = state.manches[i];
-    state.current = { points: { ...m.points }, scopes: { ...m.scopes } };
+    state.current = { points: { ...m.points }, scopes: { ...m.scopes }, prim: JSON.parse(JSON.stringify(m.prim || {})) };
     state.editIndex = i;
   });
   $('#sheet').scrollTop = 0;
@@ -353,6 +452,12 @@ function renderSheet() {
   for (const pt of POINTS) {
     const label = el('div', 'pt-label');
     label.append(el('strong', '', pt.label), el('span', '', pt.hint));
+    if (pt.key === 'primiera') {
+      const calc = el('button', 'calc-btn', '🧮 Calculer');
+      calc.type = 'button';
+      calc.addEventListener('click', openPrimiera);
+      label.append(calc);
+    }
     grid.append(label);
     for (const p of teams) {
       const on = m.points[pt.key] === p.id;
