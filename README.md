@@ -48,8 +48,9 @@ moment depuis le menu *Joueurs / Équipes*) :
   tours à 0 au dix-mille ; haut, bonus, bas, combinaisons, yams et cases barrées au
   yams ; manches gagnées, meilleure manche et répartition des points à la scoppa.
 
-Fin de partie : au dix-mille, quand tout le monde a joué son dernier tour après le
-premier joueur à 10 000 ; au yams, quand la grille est pleine ; à la scoppa, quand une
+Fin de partie : au dix-mille, c'est vous qui décidez avec le bouton « 🏁 Fin »,
+qui apparaît dès qu'un joueur atteint 10 000 (celui qui passe 10 000 peut donner sa
+main au suivant, qui la continue) ; au yams, quand la grille est pleine ; à la scoppa, quand une
 équipe est seule en tête au-delà de l'objectif. Les graphiques sont dessinés en SVG
 par `stats.js`, sans bibliothèque externe.
 

@@ -30,7 +30,6 @@ function defaultState() {
     history: [],
     redo: [],
     log: [],          // one entry per validation: { pid, v, kind: 'add' | 'set' }
-    firstOverId: null, // first player to reach the target: the game ends when it is their turn again
   };
 }
 
@@ -68,7 +67,6 @@ function capture() {
   return {
     scores: state.players.map((p) => [p.id, p.score, p.last]),
     turnId: state.turnId,
-    firstOverId: state.firstOverId,
   };
 }
 
@@ -78,7 +76,6 @@ function restore(h) {
     if (p) { p.score = score; p.last = last; }
   }
   state.turnId = h.turnId;
-  state.firstOverId = h.firstOverId ?? null;
   ensureIds();
   state.selectedId = state.turnId;
   state.mode = 'add';
@@ -169,25 +166,20 @@ function validate() {
     p.score += v;
     p.last = v;
     state.log.push({ pid: p.id, v, kind: 'add' });
-    if (!state.firstOverId && p.score >= target()) state.firstOverId = p.id;
     if (before < target() && p.score >= target()) { sfx.win(); toast(`${p.name} atteint ${fmt(target())} !`, 2500); }
     else if (v === 0) sfx.zero();
     else sfx.add();
     state.turnId = nextId(p.id);
     state.selectedId = state.turnId;
-    if (gameOver()) {
-      // Everyone had their last turn.
-      clearInput();
-      scrollToSelected = true;
-      setTimeout(showStats, 600);
-      return;
-    }
   }
   clearInput();
   scrollToSelected = true;
 }
 
-const gameOver = () => !!state.firstOverId && state.turnId === state.firstOverId;
+// The first to pass the target may hand their turn to the next player, who
+// can carry on: only the players know when the game is over, so ending it
+// is left to them (🏁 Fin button) once someone has reached the target.
+const targetReached = () => state.players.some((p) => p.score >= target());
 
 /* ---------- Statistics ---------- */
 
@@ -287,7 +279,6 @@ function newGame() {
   state.history = [];
   state.redo = [];
   state.log = [];
-  state.firstOverId = null;
   state.turnId = state.selectedId = state.players[0]?.id ?? null;
   state.mode = 'add';
   clearInput();
@@ -410,7 +401,7 @@ function renderEntry() {
   const modeBtn = $('#modeBtn');
   modeBtn.classList.toggle('on', state.mode === 'set');
   $('#redoBtn').hidden = !state.redo.length;
-  $('#endStatsBtn').hidden = !gameOver();
+  $('#endStatsBtn').hidden = !targetReached();
   modeBtn.textContent = state.mode === 'set' ? 'Retour' : 'Corriger';
   if (!p) {
     $('#entryDot').style.background = '';
