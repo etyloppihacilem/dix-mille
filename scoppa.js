@@ -7,8 +7,8 @@ const STORAGE_KEY = 'scoppa-state-v1';
 const TARGETS = [11, 16, 21, 31];
 const POINTS = [
   { key: 'cartes', label: 'Carte', hint: 'le plus de cartes' },
-  { key: 'deniers', label: 'Denari', hint: 'le plus de denari' },
-  { key: 'settebello', label: 'Settebello', hint: 'le 7 de denari' },
+  { key: 'deniers', label: 'Denari', hint: '' },
+  { key: 'settebello', label: 'Settebello', hint: '' },
   { key: 'primiera', label: 'Primiera', hint: 'la meilleure primiera' },
 ];
 
