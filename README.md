@@ -41,6 +41,13 @@ La page d'accueil propose trois jeux :
 - Score à atteindre au choix (11, 16, 21 ou 31) dans le menu *Équipes* ; l'équipe
   seule en tête au-delà de l'objectif gagne.
 
+## Fléchettes (`flechettes.html`)
+
+- Départ à 301, 501 ou 701 (menu *Joueurs*) ; on tape le total de chaque volée
+  (180 au maximum), qui est retiré du score.
+- Il faut arriver **exactement à 0** : une volée qui ferait passer sous 0 est
+  annulée (« dépassé ») et la main passe au joueur suivant.
+
 ## Statistiques
 
 À la fin de la partie, un écran de statistiques s'ouvre (aussi accessible à tout

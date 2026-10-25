@@ -1,7 +1,7 @@
 {
   "name": "Feuilles de score",
   "short_name": "Scores",
-  "description": "Feuilles de score pour le dix-mille, le yams et la scoppa",
+  "description": "Feuilles de score pour le dix-mille, le yams, la scoppa et les fléchettes",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",

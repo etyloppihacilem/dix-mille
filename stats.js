@@ -228,7 +228,7 @@ function openStats(opts) {
     const hint = document.createElement('p');
     hint.className = 'stats-note';
     const unit = opts.chart?.xName || 'tour';
-    hint.textContent = `Score cumulé à chaque ${unit} (axe horizontal) · touche le graphique pour le détail.`;
+    hint.textContent = `${opts.chart?.yName || 'Score cumulé'} à chaque ${unit} (axe horizontal) · touche le graphique pour le détail.`;
     sheet.append(hint);
   } else {
     const p = document.createElement('p');

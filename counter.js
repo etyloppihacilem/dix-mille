@@ -1,8 +1,10 @@
 'use strict';
 
-/* Running-total score sheet (dix-mille, scoppa…). Configured by window.GAME:
+/* Running-total score sheet (dix-mille, fléchettes). Configured by window.GAME:
    storageKey, target (winning score), targetChoices (optional list the
-   players can pick from), defaultName, maxDigits. */
+   players can pick from), defaultName, maxDigits, countdown.
+   With countdown, `target` is the starting score and each volley is taken
+   off it: the first to land exactly on 0 wins, going below 0 is a bust. */
 
 const GAME = {
   storageKey: 'dix-mille-state-v1',
@@ -10,14 +12,17 @@ const GAME = {
   targetChoices: null,
   defaultName: 'Joueur',
   maxDigits: 6,
+  countdown: false,
+  maxVolley: 180,
   ...window.GAME,
 };
+const CD = GAME.countdown;
 
 /* ---------- State ---------- */
 
 function defaultState() {
   const players = [1, 2].map((n, i) => ({
-    id: uid(), name: `${GAME.defaultName} ${n}`, color: COLORS[i * 5], score: 0, last: null,
+    id: uid(), name: `${GAME.defaultName} ${n}`, color: COLORS[i * 5], score: CD ? GAME.target : 0, last: null,
   }));
   return {
     players,
@@ -43,6 +48,10 @@ let state = loadState();
 let editing = false;
 
 const target = () => (GAME.targetChoices ? state.target : GAME.target);
+const startScore = () => (CD ? target() : 0);
+const hasWon = (p) => (CD ? p.score === 0 : p.score >= target());
+// Best score so far: the highest one, or the lowest remaining in countdown.
+const leadScore = () => (CD ? Math.min(...state.players.map((p) => p.score)) : Math.max(...state.players.map((p) => p.score)));
 
 function save() {
   const { input, negative, ...rest } = state;
@@ -159,6 +168,30 @@ function validate() {
     sfx.set();
     state.selectedId = state.turnId;
     toast(`Score de ${p.name} corrigé`);
+  } else if (CD) {
+    const v = Math.abs(inputValue());
+    if (v > GAME.maxVolley) { toast(`${GAME.maxVolley} maximum par volée`); return; }
+    snapshot();
+    const left = p.score - v;
+    if (left < 0) {
+      // Bust: the volley does not count.
+      p.last = 'bust';
+      state.log.push({ pid: p.id, v, kind: 'add', bust: true });
+      sfx.zero();
+      toast(`${p.name} dépasse : volée annulée`);
+    } else {
+      p.score = left;
+      p.last = -v;
+      state.log.push({ pid: p.id, v, kind: 'add' });
+      if (left === 0) {
+        sfx.win();
+        toast(`🎯 ${p.name} termine pile à 0 !`, 3000);
+        setTimeout(showStats, 900);
+      } else if (v === 0) sfx.zero();
+      else sfx.add();
+    }
+    state.turnId = nextId(p.id);
+    state.selectedId = state.turnId;
   } else {
     snapshot();
     const v = inputValue();
@@ -179,11 +212,12 @@ function validate() {
 // The first to pass the target may hand their turn to the next player, who
 // can carry on: only the players know when the game is over, so ending it
 // is left to them (🏁 Fin button) once someone has reached the target.
-const targetReached = () => state.players.some((p) => p.score >= target());
+const targetReached = () => state.players.some(hasWon);
 
 /* ---------- Statistics ---------- */
 
 function showStats() {
+  if (CD) { showCountdownStats(); return; }
   const T = target();
   const per = state.players.map((p) => ({ p, turns: 0, sum: 0, best: null, zeros: 0, reachedAt: null, score: 0, points: [[0, 0]] }));
   const byPid = Object.fromEntries(per.map((x) => [x.p.id, x]));
@@ -230,6 +264,58 @@ function showStats() {
   });
 }
 
+function showCountdownStats() {
+  const start = startScore();
+  const per = state.players.map((p) => ({ p, turns: 0, sum: 0, scored: 0, best: null, busts: 0, tons: 0, doneAt: null, score: start, points: [[0, start]] }));
+  const byPid = Object.fromEntries(per.map((x) => [x.p.id, x]));
+  for (const e of state.log) {
+    const s = byPid[e.pid];
+    if (!s) continue;
+    if (e.kind === 'set') {
+      s.score = e.v;
+      s.points[s.points.length - 1] = [s.turns, e.v];
+      continue;
+    }
+    s.turns++;
+    if (e.bust) s.busts++;
+    else {
+      s.score -= e.v;
+      s.sum += e.v;
+      s.scored++;
+      s.best = Math.max(s.best ?? e.v, e.v);
+      if (e.v >= 100) s.tons++;
+    }
+    s.points.push([s.turns, s.score]);
+    if (s.doneAt == null && s.score === 0) s.doneAt = s.turns;
+  }
+  const winners = state.players.filter(hasWon);
+  const lead = leadScore();
+  const leaders = state.players.filter((p) => p.score === lead).map((p) => p.name).join(' et ');
+  const dash = '—';
+  const doneAt = winners.length ? byPid[winners[0].id].doneAt : null;
+  openStats({
+    title: winners.length ? 'Fin de partie' : 'Statistiques',
+    headline: winners.length
+      ? `🎯 ${winners.map((w) => w.name).join(' et ')} termine${doneAt ? ` en ${doneAt} volée${doneAt > 1 ? 's' : ''}` : ''}`
+      : `👑 ${leaders} : plus que ${fmt(lead)}`,
+    series: per.map((x) => ({ name: x.p.name, color: x.p.color, points: x.points })),
+    chart: { xName: 'volée', xTitle: 'Volée', yName: 'Score restant' },
+    tables: [{
+      title: 'Résumé',
+      players: state.players,
+      rows: [
+        ['Reste', ...state.players.map((p) => fmt(p.score))],
+        ['Volées', ...per.map((x) => x.turns)],
+        ['Moyenne par volée', ...per.map((x) => (x.scored ? Math.round(x.sum / x.scored) : dash))],
+        ['Meilleure volée', ...per.map((x) => x.best ?? dash)],
+        ['Volées de 100 et plus', ...per.map((x) => x.tons)],
+        ['Volées dépassées', ...per.map((x) => x.busts)],
+      ],
+    }],
+    onNewGame: newGame,
+  });
+}
+
 function selectPlayer(id, mode) {
   if (state.selectedId !== id || state.mode !== mode) clearInput();
   state.selectedId = id;
@@ -255,7 +341,7 @@ function toggleMode() {
 function addPlayer() {
   const p = {
     id: uid(), name: `${GAME.defaultName} ${state.players.length + 1}`,
-    color: freeColor(state.players), score: 0, last: null,
+    color: freeColor(state.players), score: startScore(), last: null,
   };
   state.players.push(p);
   ensureIds();
@@ -274,8 +360,8 @@ function removePlayer(id) {
 }
 
 function newGame() {
-  if (!confirm('Remettre tous les scores à 0 ?')) return;
-  for (const p of state.players) { p.score = 0; p.last = null; }
+  if (!confirm(CD ? `Remettre tout le monde à ${startScore()} ?` : 'Remettre tous les scores à 0 ?')) return;
+  for (const p of state.players) { p.score = startScore(); p.last = null; }
   state.history = [];
   state.redo = [];
   state.log = [];
@@ -329,7 +415,13 @@ function renderTargetChoices() {
     b.type = 'button';
     b.className = 'chip' + (t === state.target ? ' on' : '');
     b.textContent = fmt(t);
-    b.addEventListener('click', () => { state.target = t; save(); renderTargetChoices(); });
+    b.addEventListener('click', () => {
+      state.target = t;
+      // Countdown: a game not started yet begins from the new score.
+      if (CD && !state.log.length) for (const p of state.players) p.score = t;
+      save();
+      renderTargetChoices();
+    });
     box.append(b);
   }
 }
@@ -343,7 +435,8 @@ function renderList() {
     listEl.append(d);
     return;
   }
-  const best = Math.max(...state.players.map((p) => p.score));
+  const best = leadScore();
+  const someonePlayed = CD ? state.log.length > 0 : best > 0;
   for (const p of state.players) {
     const row = document.createElement('div');
     row.className = 'player';
@@ -360,16 +453,16 @@ function renderList() {
     dot.className = 'dot';
     const name = document.createElement('div');
     name.className = 'name';
-    name.textContent = (p.score === best && best > 0 ? '👑 ' : '') + p.name;
+    name.textContent = (p.score === best && someonePlayed ? '👑 ' : '') + p.name;
 
     const score = document.createElement('div');
-    score.className = 'score' + (p.score >= target() ? ' win' : '');
+    score.className = 'score' + (hasWon(p) ? ' win' : '');
     const total = document.createElement('span');
     total.className = 'total';
     total.textContent = fmt(p.score);
     const last = document.createElement('span');
     last.className = 'last';
-    last.textContent = p.last == null ? ' ' : (p.last >= 0 ? '+' : '') + fmt(p.last);
+    last.textContent = p.last == null ? ' ' : p.last === 'bust' ? 'dépassé' : (p.last >= 0 ? '+' : '−') + fmt(Math.abs(p.last));
     score.append(total, last);
     score.addEventListener('click', (e) => { e.stopPropagation(); selectPlayer(p.id, 'set'); });
 
@@ -379,7 +472,7 @@ function renderList() {
       box.classList.add('caret');
       const digits = state.input ? fmt(parseInt(state.input, 10)) : '';
       if (state.mode === 'set') box.textContent = '= ' + (state.negative ? '−' : '') + digits;
-      else box.textContent = (state.negative ? '− ' : '+ ') + digits;
+      else box.textContent = (CD || state.negative ? '− ' : '+ ') + digits;
     } else {
       box.textContent = '+';
     }
@@ -416,6 +509,11 @@ function renderEntry() {
     $('#entryCalc').textContent = `${fmt(p.score)} → ${state.input === '' ? '…' : fmt(v)}`;
   } else {
     $('#entryName').textContent = p.name;
+    if (CD) {
+      const left = p.score - Math.abs(v);
+      $('#entryCalc').textContent = `${fmt(p.score)} − ${fmt(Math.abs(v))} = ${left < 0 ? 'dépassé' : fmt(left)}`;
+      return;
+    }
     const sign = v < 0 || state.negative ? '−' : '+';
     $('#entryCalc').textContent = `${fmt(p.score)} ${sign} ${fmt(Math.abs(v))} = ${fmt(p.score + v)}`;
   }

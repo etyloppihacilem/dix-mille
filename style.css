@@ -275,6 +275,7 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
 .keypad button.ok:active { filter: brightness(.9); }
 
 .keypad button.span2 { grid-column: span 2; }
+.keypad button.ok.span4 { grid-column: span 4; }
 .keypad.compact { grid-auto-rows: clamp(40px, 6.6dvh, 60px); }
 
 /* ---- Chips (quick values, target choice) ---- */
