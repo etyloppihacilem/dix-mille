@@ -29,7 +29,7 @@ function refreshTeams(st) {
 function defaultState() {
   const players = defaultRosterPlayers().map((r) => ({ id: uid(), members: [r.id], name: r.name, color: r.color }));
   return {
-    gameId: uid(), // identifies the game in the global history
+    gameId: gameUid(), // identifies the game in the global history
     players,
     target: 21,
     manches: [],          // validated manches, oldest first
@@ -422,7 +422,7 @@ function renderTeamEditor(box) {
 function newGame() {
   if (!confirm('Effacer toutes les manches ?')) return;
   state.manches = [];
-  state.gameId = uid();
+  state.gameId = gameUid();
   state.current = emptyManche();
   state.editIndex = null;
   state.history = [];

@@ -12,6 +12,14 @@ const COLORS = [
 const $ = (sel) => document.querySelector(sel);
 const fmt = (n) => n.toLocaleString('fr-FR');
 const uid = () => Math.random().toString(36).slice(2, 10);
+// Identifier of a finished game, unique across phones (12 base-36 characters,
+// about 62 random bits): the same game read twice from another phone is
+// recognised and not duplicated.
+function gameUid() {
+  const bytes = new Uint8Array(12);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (b) => (b % 36).toString(36)).join('');
+}
 
 function loadJSON(key) {
   try { return JSON.parse(localStorage.getItem(key)); } catch (e) { return null; }

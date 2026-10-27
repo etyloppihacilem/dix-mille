@@ -191,7 +191,7 @@ function save() {
     winners = players.filter((p) => p.score === best).map((p) => p.id);
   }
   const title = draft.title.trim();
-  recordGame({ gameId: uid(), game: 'autre', title, mode: draft.mode, lowWins: draft.mode === 'points' && draft.low, players, winners });
+  recordGame({ gameId: gameUid(), game: 'autre', title, mode: draft.mode, lowWins: draft.mode === 'points' && draft.low, players, winners });
   sfx.win();
   toast(`Partie de ${title} enregistrée : 🏆 ${winners.map((id) => rosterById(id).name).join(' et ')}`, 3000);
   // Same game and players for the next one, fresh results.

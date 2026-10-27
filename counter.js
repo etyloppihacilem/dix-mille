@@ -25,7 +25,7 @@ function defaultState() {
     id: r.id, name: r.name, color: r.color, score: CD ? GAME.target : 0, last: null,
   }));
   return {
-    gameId: uid(),     // identifies the game in the global history
+    gameId: gameUid(),     // identifies the game in the global history
     finished: false,   // dix-mille: the players ended the game (🏁 Fin)
     players,
     turnId: players[0].id,     // whose turn it is in the normal rotation
@@ -380,7 +380,7 @@ function removePlayer(id) {
 function newGame() {
   if (!confirm(CD ? `Remettre tout le monde à ${startScore()} ?` : 'Remettre tous les scores à 0 ?')) return;
   for (const p of state.players) { p.score = startScore(); p.last = null; }
-  state.gameId = uid();
+  state.gameId = gameUid();
   state.finished = false;
   state.history = [];
   state.redo = [];

@@ -31,7 +31,7 @@ const rowByKey = (k) => ROWS.find((r) => r.key === k);
 function defaultState() {
   const players = defaultRosterPlayers().map(({ id, name, color }) => ({ id, name, color }));
   return {
-    gameId: uid(), // identifies the game in the global history
+    gameId: gameUid(), // identifies the game in the global history
     players,
     cells: {},     // { playerId: { rowKey: points } }
     turnId: players[0].id,
@@ -268,7 +268,7 @@ function removePlayer(id) {
 function newGame() {
   if (!confirm('Effacer toutes les feuilles de score ?')) return;
   state.cells = {};
-  state.gameId = uid();
+  state.gameId = gameUid();
   state.log = [];
   state.history = [];
   state.redo = [];

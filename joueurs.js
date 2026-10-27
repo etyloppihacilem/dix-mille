@@ -614,15 +614,40 @@ function sheet(title) {
   return body;
 }
 
-function showQr(players) {
+// The players and all their finished games, as one QR code or a series of
+// QR codes shown in turn (the other phone collects them in any order).
+async function showQr(players) {
   const body = sheet(players.length === 1 ? players[0].name : 'Tous les joueurs');
-  const qr = qrcode(0, 'M');
-  qr.addData(encodeProfiles(players), 'Byte');
-  qr.make();
+  const { bundle, games } = buildBundle(players.map((p) => p.id));
+  const frames = await bundleFrames(bundle);
+  const svgs = frames.map((text) => {
+    const qr = qrcode(0, 'L');
+    qr.addData(text, 'Byte');
+    qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 4, scalable: true });
+  });
   const box = el('div', 'qr-box');
-  box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 4, scalable: true });
   body.append(box);
-  body.append(el('p', 'stats-note', `${players.map((p) => p.name).join(', ')}. Sur l’autre téléphone : ★ Joueurs & statistiques → « Scanner un QR code », puis vise ce code.`));
+  const info = el('p', 'qr-progress');
+  body.append(info);
+  let i = 0, paused = false;
+  const show = () => {
+    box.innerHTML = svgs[i];
+    info.textContent = frames.length > 1 ? `QR code ${i + 1} / ${frames.length}${paused ? ' · en pause (touche pour reprendre)' : ''}` : '';
+  };
+  show();
+  if (frames.length > 1) {
+    const timer = setInterval(() => {
+      if (!document.body.contains(box)) { clearInterval(timer); return; }
+      if (!paused) { i = (i + 1) % frames.length; show(); }
+    }, 900);
+    box.addEventListener('click', () => { paused = !paused; show(); });
+  }
+  const who = players.map((p) => p.name).join(', ');
+  body.append(el('p', 'stats-note', `${who} · ${games} partie${games > 1 ? 's' : ''} terminée${games > 1 ? 's' : ''}. `
+    + 'Sur l’autre téléphone : ★ Joueurs & statistiques → « Scanner un QR code », puis vise l’écran'
+    + (frames.length > 1 ? ' jusqu’à ce que tous les QR codes soient lus (ils défilent tout seuls).' : '.')
+    + ' Les parties déjà présentes là-bas ne sont pas dupliquées.'));
 }
 
 const scan = { stream: null, reader: null };
@@ -663,10 +688,26 @@ async function openScanner() {
   await video.play().catch(() => {});
   scan.reader = window.CameraScan.create(video, mark);
   await scan.reader.prepare();
+  const collector = frameCollector();
   while (scan.stream === media) {
     try {
       const text = await scan.reader.detect();
-      if (text) {
+      const frame = text && parseFrame(text);
+      if (frame) {
+        const before = collector.received();
+        collector.add(frame);
+        if (collector.received() !== before) sfx.key();
+        status.textContent = `QR codes lus : ${collector.received()} / ${collector.total()}`;
+        if (collector.complete()) {
+          stopScanner();
+          let bundle;
+          try { bundle = await collector.bundle(); } catch (e) { status.textContent = e.message; return; }
+          closeStats();
+          receiveBundle(bundle);
+          return;
+        }
+      } else if (text) {
+        // QR codes of the previous version: players only.
         const players = decodeProfiles(text);
         if (players && players.length) { stopScanner(); closeStats(); receive(players); return; }
         status.textContent = 'Ce QR code ne contient pas de joueurs.';
@@ -679,6 +720,24 @@ async function openScanner() {
 function stopScanner() {
   if (scan.stream) scan.stream.getTracks().forEach((t) => t.stop());
   scan.stream = null;
+}
+
+function receiveBundle(bundle) {
+  sfx.add();
+  const { players, games, fresh } = previewBundle(bundle);
+  const twins = bundle.m.map((i) => bundle.p[i]).filter(([id, name]) => !rosterById(id) && roster.some((r) => sameName(r.name, name)));
+  const note = twins.length ? `\n\n${twins.map((p) => p[1]).join(', ')} existe déjà ici : ce sera le même joueur.` : '';
+  const what = fresh ? `${fresh} nouvelle${fresh > 1 ? 's' : ''} partie${fresh > 1 ? 's' : ''}` : 'aucune nouvelle partie';
+  const dup = games - fresh ? ` (${games - fresh} déjà enregistrée${games - fresh > 1 ? 's' : ''}, ignorée${games - fresh > 1 ? 's' : ''})` : '';
+  if (!confirm(`Recevoir ${players.join(', ')} avec ${what}${dup} ?${note}`)) return;
+  const r = importBundle(bundle);
+  const parts = [];
+  if (r.added.length) parts.push(`${r.added.length} joueur${r.added.length > 1 ? 's' : ''} ajouté${r.added.length > 1 ? 's' : ''}`);
+  if (r.merged.length) parts.push(`${r.merged.length} fusionné${r.merged.length > 1 ? 's' : ''}`);
+  parts.push(`${r.games} partie${r.games > 1 ? 's' : ''} importée${r.games > 1 ? 's' : ''}`);
+  toast(parts.join(', '), 3000);
+  renderRoster();
+  renderStats();
 }
 
 function receive(players) {

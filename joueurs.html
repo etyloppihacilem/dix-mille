@@ -41,7 +41,7 @@
 
     <section class="g-section">
       <h2>Partager entre téléphones</h2>
-      <p class="stats-note">Affiche le QR code d’un joueur (bouton QR) ou de tous, et scanne-le depuis l’autre téléphone : les deux reconnaissent alors le même joueur.</p>
+      <p class="stats-note">Affiche le QR code d’un joueur (bouton QR) ou de tous, et scanne-le depuis l’autre téléphone : le joueur y arrive avec toutes ses parties terminées, sans doublon avec celles déjà présentes.</p>
       <div class="btn-row">
         <button id="scanBtn" class="wide-btn primary" type="button">📷 Scanner un QR code</button>
         <button id="qrAllBtn" class="wide-btn" type="button">QR de tous les joueurs</button>
@@ -67,6 +67,7 @@
   <script src="vendor/qrcode.js"></script>
   <script src="vendor/jsQR.js"></script>
   <script src="camera-scan.js"></script>
+  <script src="sync.js"></script>
   <script src="joueurs.js"></script>
 </body>
 </html>

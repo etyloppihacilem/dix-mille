@@ -89,9 +89,18 @@ nom de jeu dans le détail par jeu.
 - **Invités** (« + Invité » dans un jeu ou sur cette page, ou bouton « Invité » d'un
   joueur) : ils jouent normalement mais ne comptent pas dans les statistiques globales.
 - **Partage entre téléphones** : bouton « QR » d'un joueur ou « QR de tous les joueurs »,
-  puis « 📷 Scanner un QR code » sur l'autre téléphone. Un joueur du même nom y devient
-  le même joueur (ses parties sont conservées), pour que les deux téléphones le
-  reconnaissent.
+  puis « 📷 Scanner un QR code » sur l'autre téléphone. Le joueur y arrive **avec toutes
+  ses parties terminées** ; les parties déjà présentes sont reconnues et ignorées, donc
+  relire un QR code ne crée jamais de doublon. Un joueur du même nom y devient le même
+  joueur (ses parties sont conservées).
+
+  Format : joueurs, jeux et noms d'équipes en dictionnaire, chaque partie réduite à
+  `[identifiant, jeu, minute, options, [[joueur, score, tours, équipe]…], [gagnants]]`,
+  le tout compressé (deflate) et encodé en base64url, puis découpé en QR codes de
+  480 caractères qui défilent tout seuls (`FDS2|envoi|n°|total|z|données`) ; le lecteur
+  les collecte dans n'importe quel ordre. Chaque partie terminée porte un identifiant
+  aléatoire de 12 caractères (environ 62 bits) qui la rend unique d'un téléphone à
+  l'autre. Environ 70 parties tiennent en 6 QR codes.
 - **Sauvegarde** : « Exporter » produit un fichier JSON avec tout ce qui est enregistré
   (joueurs, parties en cours, historique) ; « Importer… » remplace les données du
   téléphone par une sauvegarde.
