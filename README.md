@@ -58,7 +58,8 @@ La page d'accueil propose trois jeux :
 - Chaque partie terminée est enregistrée (dix-mille : bouton « 🏁 Fin » ; yams :
   grille pleine ; scoppa : objectif atteint ; fléchettes : pile à 0). Une annulation
   qui défait la fin retire la partie.
-- Statistiques sur les dernières 24 h, les 7 derniers jours ou depuis toujours :
+- Statistiques sur les dernières 24 h, les 7 derniers jours, par mois, par année
+  (flèches ‹ › pour remonter dans le temps) ou depuis toujours :
   classement (victoires, parties, %), détail par jeu, courbe des victoires cumulées,
   records et liste des dernières parties (une partie peut en être retirée).
 

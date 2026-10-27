@@ -1,15 +1,40 @@
 'use strict';
 
 /* Global page: the shared roster and statistics over every finished game,
-   for the last 24 hours, the last 7 days or all time. */
+   for the last 24 hours, the last 7 days, a calendar month or year (browsable
+   backwards) or all time. */
 
 const PERIODS = [
-  { key: 'day', label: '24 h', ms: 24 * 3600e3 },
-  { key: 'week', label: '7 jours', ms: 7 * 24 * 3600e3 },
-  { key: 'all', label: 'Tout', ms: Infinity },
+  { key: 'day', label: '24 h' },
+  { key: 'week', label: '7 jours' },
+  { key: 'month', label: 'Mois' },
+  { key: 'year', label: 'Année' },
+  { key: 'all', label: 'Tout' },
 ];
 let period = 'all';
 try { period = localStorage.getItem('joueurs-period') || 'all'; } catch (e) { /* ignore */ }
+if (!PERIODS.some((p) => p.key === period)) period = 'all';
+let offset = 0; // months or years back from the current one
+
+// [start, end) timestamps of the selected period.
+function range() {
+  const now = new Date();
+  const y = now.getFullYear();
+  switch (period) {
+    case 'day': return [Date.now() - 24 * 3600e3, Infinity];
+    case 'week': return [Date.now() - 7 * 24 * 3600e3, Infinity];
+    case 'month': return [new Date(y, now.getMonth() - offset, 1).getTime(), new Date(y, now.getMonth() - offset + 1, 1).getTime()];
+    case 'year': return [new Date(y - offset, 0, 1).getTime(), new Date(y - offset + 1, 0, 1).getTime()];
+    default: return [-Infinity, Infinity];
+  }
+}
+
+function rangeLabel() {
+  const [start] = range();
+  if (period === 'year') return String(new Date(start).getFullYear());
+  const m = new Date(start).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+  return m.charAt(0).toUpperCase() + m.slice(1);
+}
 
 const el = (tag, cls, text) => {
   const e = document.createElement(tag);
@@ -25,9 +50,8 @@ const who = (p) => {
 };
 
 function games() {
-  const ms = PERIODS.find((p) => p.key === period).ms;
-  const since = Date.now() - ms;
-  return loadHistory().filter((g) => g.endedAt >= since).sort((a, b) => a.endedAt - b.endedAt);
+  const [start, end] = range();
+  return loadHistory().filter((g) => g.endedAt >= start && g.endedAt < end).sort((a, b) => a.endedAt - b.endedAt);
 }
 
 function when(ts) {
@@ -58,12 +82,31 @@ function renderStats() {
     b.type = 'button';
     b.addEventListener('click', () => {
       period = p.key;
+      offset = 0;
       try { localStorage.setItem('joueurs-period', period); } catch (e) { /* ignore */ }
       renderStats();
     });
     tabs.append(b);
   }
   box.append(tabs);
+
+  if (period === 'month' || period === 'year') {
+    // Browse previous months / years, back to the oldest recorded game.
+    const oldest = Math.min(...loadHistory().map((g) => g.endedAt));
+    const nav = el('div', 'period-nav');
+    const prev = el('button', 'icon-btn', '‹');
+    prev.type = 'button';
+    prev.setAttribute('aria-label', period === 'month' ? 'Mois précédent' : 'Année précédente');
+    prev.disabled = !(range()[0] > oldest);
+    prev.addEventListener('click', () => { offset++; renderStats(); });
+    const next = el('button', 'icon-btn', '›');
+    next.type = 'button';
+    next.setAttribute('aria-label', period === 'month' ? 'Mois suivant' : 'Année suivante');
+    next.disabled = offset === 0;
+    next.addEventListener('click', () => { offset--; renderStats(); });
+    nav.append(prev, el('strong', '', rangeLabel()), next);
+    box.append(nav);
+  }
 
   const list = games();
   if (!list.length) {
@@ -126,7 +169,7 @@ function renderStats() {
     series.forEach((s, i) => s.points.push([n + 1, counts[i]]));
   });
   if (series.length > 1) chart.append(legend(series));
-  chart.append(lineChart(series, { xTitle: 'Partie', label: 'Victoires cumulées' }));
+  chart.append(lineChart(series, { xTitle: 'Partie', label: 'Victoires cumulées', integer: true }));
   chart.append(el('p', 'stats-note', 'Victoires cumulées après chaque partie · touche le graphique pour le détail.'));
   box.append(chart);
 

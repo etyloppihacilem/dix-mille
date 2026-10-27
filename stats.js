@@ -39,7 +39,8 @@ function lineChart(series, opts = {}) {
   const xMax = Math.max(1, ...all.map((p) => p[0]));
   const yMaxData = Math.max(0, ...all.map((p) => p[1]), opts.target ?? 0);
   const yMinData = Math.min(0, ...all.map((p) => p[1]));
-  const yStep = niceStep(yMaxData - yMinData, 4);
+  // Counts (wins…) get whole-number ticks.
+  const yStep = opts.integer ? Math.max(1, Math.ceil(niceStep(yMaxData - yMinData, 4))) : niceStep(yMaxData - yMinData, 4);
   const yMin = Math.floor(yMinData / yStep) * yStep;
   const yMax = Math.ceil(yMaxData / yStep) * yStep || yStep;
   const X = (x) => m.l + (x / xMax) * (W - m.l - m.r);

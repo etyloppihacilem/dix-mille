@@ -707,7 +707,16 @@ body.home { overflow-y: auto; }
 .global { padding: 0 16px calc(24px + env(safe-area-inset-bottom)); }
 .g-section { margin-top: 18px; }
 .g-section h2 { font-size: 1rem; margin: 0 0 8px; }
-.period-tabs { margin-top: 4px; }
+.period-tabs { margin-top: 4px; flex-wrap: nowrap; }
+.period-tabs .chip { flex: 1 1 auto; min-width: 0; padding: 8px 6px; }
+.period-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-top: 10px; padding: 4px;
+  background: var(--surface); box-shadow: var(--shadow); border-radius: 999px;
+}
+.period-nav strong { font-size: 1rem; }
+.period-nav .icon-btn { font-size: 1.5rem; color: var(--text); box-shadow: none; }
+.period-nav .icon-btn:disabled { opacity: .25; }
 .records { display: flex; flex-direction: column; gap: 6px; }
 .record-row {
   display: flex; justify-content: space-between; gap: 12px;
