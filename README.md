@@ -78,6 +78,12 @@ nom de jeu dans le détail par jeu.
   d'adversaires de chaque partie), avec une partie moyenne ajoutée pour ne pas favoriser
   ceux qui ont peu joué. 1 = dans la moyenne. Les joueurs qui ne jouent pas toujours
   ensemble restent ainsi comparables.
+- **Faits marquants** : plus longue série de victoires, série en cours, plus belle
+  journée, grande rivalité, partie la plus serrée, spécialiste d'un jeu, joueur le plus
+  assidu, jeu le plus joué, journée la plus chargée.
+- **Graphiques** : victoires cumulées, indice de chacun au fil des parties (ligne de la
+  moyenne), activité (parties par jour, semaine ou mois), parties par jeu, et tableau
+  des duels (victoires–défaites de chaque joueur face à chaque autre).
 - **Invités** (« + Invité » dans un jeu ou sur cette page, ou bouton « Invité » d'un
   joueur) : ils jouent normalement mais ne comptent pas dans les statistiques globales.
 - **Partage entre téléphones** : bouton « QR » d'un joueur ou « QR de tous les joueurs »,

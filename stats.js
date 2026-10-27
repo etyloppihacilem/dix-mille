@@ -69,7 +69,7 @@ function lineChart(series, opts = {}) {
   if (opts.target) {
     svg.append(svgEl('line', { x1: m.l, x2: W - m.r, y1: Y(opts.target), y2: Y(opts.target), class: 'target' }));
     const t = svgEl('text', { x: m.l + 4, y: Y(opts.target) - 4, class: 'tick target-label', 'text-anchor': 'start' });
-    t.textContent = `objectif ${fmt(opts.target)}`;
+    t.textContent = opts.targetLabel ?? `objectif ${fmt(opts.target)}`;
     svg.append(t);
   }
 
@@ -123,7 +123,7 @@ function lineChart(series, opts = {}) {
       const name = document.createElement('span');
       name.textContent = s.name;
       const val = document.createElement('strong');
-      val.textContent = fmt(v);
+      val.textContent = (opts.format || fmt)(v);
       row.append(key, name, val);
       tip.append(row);
     }
@@ -141,6 +141,66 @@ function lineChart(series, opts = {}) {
   svg.addEventListener('pointermove', (e) => show(e.clientX));
   svg.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse') hide(); });
   return wrap;
+}
+
+/* Horizontal bars, each labelled with its value at the tip.
+   items: [{ label, value, color? }] */
+function barList(items, opts = {}) {
+  const box = document.createElement('div');
+  box.className = 'bars';
+  const max = Math.max(1, ...items.map((i) => i.value));
+  for (const it of items) {
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    const label = document.createElement('span');
+    label.className = 'bar-label';
+    label.textContent = it.label;
+    const track = document.createElement('span');
+    track.className = 'bar-track';
+    const fill = document.createElement('span');
+    fill.className = 'bar-fill';
+    fill.style.width = `${(100 * it.value) / max}%`;
+    fill.style.background = markColor(it.color || 'var(--accent)');
+    track.append(fill);
+    const value = document.createElement('span');
+    value.className = 'bar-value';
+    value.textContent = (opts.format || fmt)(it.value);
+    row.append(label, track, value);
+    box.append(row);
+  }
+  return box;
+}
+
+/* Vertical columns over time; tapping one shows its detail.
+   items: [{ label, value, title }] — only some labels are printed. */
+function columnChart(items) {
+  const box = document.createElement('div');
+  box.className = 'columns chart';
+  const max = Math.max(1, ...items.map((i) => i.value));
+  const plot = document.createElement('div');
+  plot.className = 'columns-plot';
+  const axis = document.createElement('div');
+  axis.className = 'columns-axis';
+  const every = Math.ceil(items.length / 6);
+  items.forEach((it, i) => {
+    const col = document.createElement('button');
+    col.type = 'button';
+    col.className = 'column';
+    col.setAttribute('aria-label', it.title);
+    const bar = document.createElement('span');
+    bar.style.height = `${(100 * it.value) / max}%`;
+    col.append(bar);
+    col.addEventListener('click', () => toast(it.title, 2000));
+    plot.append(col);
+    const tick = document.createElement('span');
+    tick.textContent = i % every === 0 ? it.label : '';
+    axis.append(tick);
+  });
+  const top = document.createElement('span');
+  top.className = 'columns-max';
+  top.textContent = max;
+  box.append(top, plot, axis);
+  return box;
 }
 
 function legend(series) {

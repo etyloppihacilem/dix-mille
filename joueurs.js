@@ -158,6 +158,20 @@ function renderStats() {
 
   box.append(el('p', 'stats-headline', `${n} partie${n > 1 ? 's' : ''} · 🏆 ${players[0].name} en tête (indice ${dec(players[0].index, 2)})`));
 
+  const hl = highlights(list, players);
+  if (hl.length) {
+    const hs = section('Faits marquants');
+    const grid = el('div', 'highlights');
+    for (const h of hl) {
+      const card = el('div', 'highlight');
+      card.append(el('span', 'highlight-icon', h.icon), el('span', 'highlight-title', h.title), el('span', 'highlight-text', h.text));
+      if (h.sub) card.append(el('span', 'highlight-sub', h.sub));
+      grid.append(card);
+    }
+    hs.append(grid);
+    box.append(hs);
+  }
+
   const rank = section('Classement');
   rank.append(statsTable({
     players: players.map((s, i) => ({ ...s, name: `${i + 1}. ${s.name}` })),
@@ -189,6 +203,20 @@ function renderStats() {
   }));
   box.append(byGame);
 
+  if (players.length > 1) {
+    const duels = section('Duels');
+    duels.append(statsTable({
+      players,
+      rows: players.map((a) => [a.name, ...players.map((b) => {
+        if (a.id === b.id) return '·';
+        const d = duel(list, a.id, b.id);
+        return d.together ? `${d.a}–${d.b}` : '—';
+      })]),
+    }));
+    duels.append(el('p', 'stats-note', 'Victoires–défaites du joueur de la ligne face à celui de la colonne, dans les parties qu’ils ont jouées ensemble.'));
+    box.append(duels);
+  }
+
   // Cumulative wins, game after game.
   const chart = section('Victoires au fil des parties');
   const series = players.map((s) => ({ name: s.name, color: s.color, points: [[0, 0]] }));
@@ -202,6 +230,43 @@ function renderStats() {
   chart.append(lineChart(series, { xTitle: 'Partie', label: 'Victoires cumulées', integer: true }));
   chart.append(el('p', 'stats-note', 'Victoires cumulées après chaque partie · touche le graphique pour le détail.'));
   box.append(chart);
+
+  // Ranking index after each game, from each player's first game on.
+  const perf = section('Indice au fil des parties');
+  const acc = new Map(players.map((s) => [s.id, { w: 0, e: 0 }]));
+  const iseries = players.map((s) => ({ name: s.name, color: s.color, points: [] }));
+  list.forEach((g, n) => {
+    for (const p of g.players) {
+      const a = acc.get(p.id);
+      if (!a) continue;
+      a.e += 1 / sides(g);
+      if (g.winners.includes(p.id)) a.w++;
+    }
+    players.forEach((s, i) => {
+      const a = acc.get(s.id);
+      if (a.e) iseries[i].points.push([n + 1, (a.w + 1) / (a.e + 1)]);
+    });
+  });
+  if (iseries.length > 1) perf.append(legend(iseries));
+  perf.append(lineChart(iseries, { xTitle: 'Partie', label: 'Indice de chaque joueur', target: 1, targetLabel: 'moyenne', format: (v) => dec(v, 2) }));
+  perf.append(el('p', 'stats-note', 'Au-dessus de la ligne « moyenne », le joueur gagne plus souvent que le hasard ne le voudrait.'));
+  box.append(perf);
+
+  const act = activity(list);
+  if (act.length > 1) {
+    const as = section('Activité');
+    as.append(columnChart(act));
+    as.append(el('p', 'stats-note', 'Parties terminées par période · touche une colonne pour le détail.'));
+    box.append(as);
+  }
+
+  if (played.length > 1) {
+    const gs = section('Parties par jeu');
+    gs.append(barList(played
+      .map((k) => ({ label: kinds.get(k).name, value: list.filter((g) => gameKey(g) === k).length, color: kinds.get(k).color }))
+      .sort((a, b) => b.value - a.value)));
+    box.append(gs);
+  }
 
   const recs = records(list);
   if (recs.length) {
@@ -219,6 +284,174 @@ function renderStats() {
   const recent = section('Dernières parties');
   for (const g of [...list].reverse().slice(0, 30)) recent.append(gameRow(g));
   box.append(recent);
+}
+
+/* ---------- Highlights ---------- */
+
+const dateLabel = (ts) => new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' }).replace(/^1 /, '1er ');
+const dayOf = (ts) => {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+};
+
+// Wins of a over b and of b over a, in the games they both played.
+function duel(list, a, b) {
+  const r = { a: 0, b: 0, together: 0 };
+  for (const g of list) {
+    const ids = g.players.map((p) => p.id);
+    if (!ids.includes(a) || !ids.includes(b)) continue;
+    const ta = g.players.find((p) => p.id === a).team;
+    if (ta && ta === g.players.find((p) => p.id === b).team) continue; // teammates
+    r.together++;
+    const wa = g.winners.includes(a), wb = g.winners.includes(b);
+    if (wa && !wb) r.a++;
+    if (wb && !wa) r.b++;
+  }
+  return r;
+}
+
+function highlights(list, players) {
+  const out = [];
+  const by = (arr, f) => arr.reduce((best, x) => (best == null || f(x) > f(best) ? x : best), null);
+
+  // Win streaks, over the games each player took part in.
+  const st = players.map((s) => {
+    let best = 0, run = 0;
+    for (const g of list) {
+      if (!g.players.some((p) => p.id === s.id)) continue;
+      run = g.winners.includes(s.id) ? run + 1 : 0;
+      best = Math.max(best, run);
+    }
+    return { s, best, current: run };
+  });
+  const longest = by(st, (x) => x.best);
+  if (longest && longest.best >= 2) out.push({ icon: '🔥', title: 'Plus longue série', text: `${longest.s.name} : ${longest.best} victoires d’affilée` });
+  const ongoing = by(st, (x) => x.current);
+  if (ongoing && ongoing.current >= 2 && (ongoing !== longest || ongoing.current !== longest.best)) {
+    out.push({ icon: '⚡', title: 'Série en cours', text: `${ongoing.s.name} : ${ongoing.current} victoires de suite` });
+  } else if (ongoing && ongoing.current >= 2) {
+    out[out.length - 1].sub = 'et ça continue !';
+  }
+
+  // Best day for one player.
+  const days = new Map();
+  for (const g of list) {
+    for (const id of g.winners) {
+      if (!players.some((s) => s.id === id)) continue;
+      const k = `${dayOf(g.endedAt)}|${id}`;
+      const d = days.get(k) || { id, n: 0, at: g.endedAt };
+      d.n++;
+      days.set(k, d);
+    }
+  }
+  const bestDay = by([...days.values()], (d) => d.n);
+  if (bestDay && bestDay.n >= 2) {
+    out.push({ icon: '🌟', title: 'Plus belle journée', text: `${players.find((s) => s.id === bestDay.id).name} : ${bestDay.n} victoires`, sub: `le ${dateLabel(bestDay.at)}` });
+  }
+
+  // The rivalry with the most games played together (closest record first).
+  const pairs = [];
+  for (let i = 0; i < players.length; i++) {
+    for (let j = i + 1; j < players.length; j++) {
+      const d = duel(list, players[i].id, players[j].id);
+      pairs.push({ p: players[i], q: players[j], wp: d.a, wq: d.b, together: d.together });
+    }
+  }
+  const rival = by(pairs, (r) => r.together * 100 - Math.abs(r.wp - r.wq));
+  if (rival && rival.together >= 2) {
+    const [lead, wl, other, wo] = rival.wp >= rival.wq ? [rival.p, rival.wp, rival.q, rival.wq] : [rival.q, rival.wq, rival.p, rival.wp];
+    out.push({ icon: '⚔️', title: 'Grande rivalité', text: `${lead.name} ${wl} – ${wo} ${other.name}`, sub: `sur ${rival.together} parties ensemble` });
+  }
+
+  // Closest game on points.
+  let closest = null;
+  for (const g of list) {
+    if (g.mode === 'winner') continue;
+    const sidesScores = [];
+    const seen = new Set();
+    for (const p of g.players) {
+      const k = p.team || p.id;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      sidesScores.push({ name: p.team || who(p).name, score: p.score });
+    }
+    if (sidesScores.length < 2) continue;
+    sidesScores.sort((a, b) => (g.lowWins ? a.score - b.score : b.score - a.score));
+    const [x, y] = sidesScores;
+    const rel = Math.abs(x.score - y.score) / Math.max(Math.abs(x.score), Math.abs(y.score), 1);
+    if (!closest || rel < closest.rel) closest = { rel, g, x, y };
+  }
+  if (closest && closest.rel < 0.1) {
+    out.push({ icon: '🤏', title: 'Partie la plus serrée', text: `${closest.x.name} ${fmt(closest.x.score)} – ${fmt(closest.y.score)} ${closest.y.name}`, sub: `${gameInfo(closest.g).name}, le ${dateLabel(closest.g.endedAt)}` });
+  }
+
+  // Specialist: best win rate on one game (3 games at least).
+  const spec = [];
+  for (const s of players) {
+    for (const [k, v] of Object.entries(s.byGame)) if (v.played >= 3) spec.push({ s, k, ...v, rate: v.wins / v.played });
+  }
+  const top = by(spec, (x) => x.rate * 1000 + x.played);
+  if (top && top.rate > 0.5) {
+    const g = list.find((x) => gameKey(x) === top.k);
+    out.push({ icon: '🎓', title: 'Spécialiste', text: `${top.s.name} · ${gameInfo(g).name}`, sub: `${top.wins} victoires sur ${top.played}` });
+  }
+
+  if (players.length > 1) {
+    const busy = by(players, (s) => s.played);
+    out.push({ icon: '🏃', title: 'Le plus assidu', text: `${busy.name} : ${busy.played} parties` });
+  }
+  const counts = new Map();
+  for (const g of list) counts.set(gameKey(g), (counts.get(gameKey(g)) || 0) + 1);
+  const fav = by([...counts.entries()], (e) => e[1]);
+  if (fav && counts.size > 1) {
+    out.push({ icon: '❤️', title: 'Jeu le plus joué', text: `${gameInfo(list.find((g) => gameKey(g) === fav[0])).name} : ${fav[1]} parties` });
+  }
+  const perDay = new Map();
+  for (const g of list) {
+    const d = perDay.get(dayOf(g.endedAt)) || { n: 0, at: g.endedAt };
+    d.n++;
+    perDay.set(dayOf(g.endedAt), d);
+  }
+  const busiest = by([...perDay.values()], (d) => d.n);
+  if (busiest && busiest.n >= 3 && perDay.size > 1) {
+    out.push({ icon: '📅', title: 'Journée la plus chargée', text: `${busiest.n} parties`, sub: `le ${dateLabel(busiest.at)}` });
+  }
+  return out;
+}
+
+// Games per day, week or month depending on the span, gaps included.
+function activity(list) {
+  if (!list.length) return [];
+  const first = list[0].endedAt;
+  const last = list[list.length - 1].endedAt;
+  const spanDays = (last - first) / (24 * 3600e3);
+  const unit = spanDays <= 21 ? 'day' : spanDays <= 150 ? 'week' : 'month';
+  const start = (ts) => {
+    const d = new Date(ts);
+    if (unit === 'month') return new Date(d.getFullYear(), d.getMonth(), 1);
+    const day = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    if (unit === 'week') day.setDate(day.getDate() - ((day.getDay() + 6) % 7)); // Monday
+    return day;
+  };
+  const step = (d) => {
+    const n = new Date(d);
+    if (unit === 'month') n.setMonth(n.getMonth() + 1);
+    else n.setDate(n.getDate() + (unit === 'week' ? 7 : 1));
+    return n;
+  };
+  const items = [];
+  for (let d = start(first); d.getTime() <= last; d = step(d)) {
+    const end = step(d).getTime();
+    const n = list.filter((g) => g.endedAt >= d.getTime() && g.endedAt < end).length;
+    const label = unit === 'month'
+      ? d.toLocaleDateString('fr-FR', { month: 'short', year: '2-digit' })
+      : d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'numeric' });
+    const what = unit === 'month' ? d.toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' })
+      : unit === 'week' ? `semaine du ${d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' })}`
+        : d.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+    items.push({ label, value: n, title: `${what} : ${n} partie${n > 1 ? 's' : ''}` });
+  }
+  return items;
 }
 
 function records(list) {
