@@ -21,9 +21,11 @@ const FRAME_SIZE = 480; // characters of data per QR code: dense enough, still e
 
 /* ---------- Building a bundle ---------- */
 
-function buildBundle(sharedIds) {
+// The shared players and their games; with `everything`, every game of the
+// history (global synchronisation), whoever played it.
+function buildBundle(sharedIds, everything = false) {
   const shared = new Set(sharedIds);
-  const games = loadHistory().filter((g) => g.players.some((p) => shared.has(p.id)));
+  const games = loadHistory().filter((g) => everything || g.players.some((p) => shared.has(p.id)));
   const p = [], pIdx = new Map();
   const k = [], kIdx = new Map();
   const s = [], sIdx = new Map();

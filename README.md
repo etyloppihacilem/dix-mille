@@ -88,7 +88,7 @@ nom de jeu dans le détail par jeu.
   des duels (victoires–défaites de chaque joueur face à chaque autre).
 - **Invités** (« + Invité » dans un jeu ou sur cette page, ou bouton « Invité » d'un
   joueur) : ils jouent normalement mais ne comptent pas dans les statistiques globales.
-- **Partage entre téléphones** : bouton « QR » d'un joueur ou « QR de tous les joueurs »,
+- **Partage entre téléphones** : bouton « QR » d'un joueur, ou « QR de synchronisation globale » (tous les joueurs et tout l'historique),
   puis « 📷 Scanner un QR code » sur l'autre téléphone. Le joueur y arrive **avec toutes
   ses parties terminées** ; les parties déjà présentes sont reconnues et ignorées, donc
   relire un QR code ne crée jamais de doublon. Un joueur du même nom y devient le même

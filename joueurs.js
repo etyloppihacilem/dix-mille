@@ -616,9 +616,9 @@ function sheet(title) {
 
 // The players and all their finished games, as one QR code or a series of
 // QR codes shown in turn (the other phone collects them in any order).
-async function showQr(players) {
-  const body = sheet(players.length === 1 ? players[0].name : 'Tous les joueurs');
-  const { bundle, games } = buildBundle(players.map((p) => p.id));
+async function showQr(players, everything = false) {
+  const body = sheet(everything ? 'Synchronisation globale' : players.length === 1 ? players[0].name : 'Joueurs');
+  const { bundle, games } = buildBundle(players.map((p) => p.id), everything);
   const frames = await bundleFrames(bundle);
   const svgs = frames.map((text) => {
     const qr = qrcode(0, 'L');
@@ -802,8 +802,8 @@ $('#newGuestBtn').addEventListener('click', () => {
 });
 $('#scanBtn').addEventListener('click', openScanner);
 $('#qrAllBtn').addEventListener('click', () => {
-  if (!roster.length) { toast('Aucun joueur à partager'); return; }
-  showQr(roster);
+  if (!roster.length && !loadHistory().length) { toast('Rien à synchroniser pour l’instant'); return; }
+  showQr(roster, true);
 });
 $('#exportBtn').addEventListener('click', exportBackup);
 $('#importBtn').addEventListener('click', () => $('#importFile').click());
