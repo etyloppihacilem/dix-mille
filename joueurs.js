@@ -137,7 +137,7 @@ function renderStats() {
       // Wins expected if every side had the same chance.
       s.expected += 1 / sides(g);
       if (won) s.wins++;
-      const bg = (s.byGame[g.game] = s.byGame[g.game] || { played: 0, wins: 0 });
+      const bg = (s.byGame[gameKey(g)] = s.byGame[gameKey(g)] || { played: 0, wins: 0 });
       bg.played++;
       if (won) bg.wins++;
     }
@@ -172,11 +172,20 @@ function renderStats() {
   rank.append(el('p', 'stats-note', 'Indice = victoires ÷ victoires attendues au hasard, selon le nombre d’adversaires de chaque partie, en comptant une partie moyenne de plus pour ne pas favoriser ceux qui ont peu joué. 1 = dans la moyenne. Les invités ne sont pas classés.'));
   box.append(rank);
 
-  const played = Object.keys(GAMES).filter((k) => list.some((g) => g.game === k));
+  // The app's games first, then the ones entered by hand, by name.
+  const kinds = new Map();
+  for (const g of list) if (!kinds.has(gameKey(g))) kinds.set(gameKey(g), gameInfo(g));
+  const order = Object.keys(GAMES);
+  const played = [...kinds.keys()].sort((a, b) => {
+    const ia = order.indexOf(a), ib = order.indexOf(b);
+    if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
+    return kinds.get(a).name.localeCompare(kinds.get(b).name, 'fr');
+  });
   const byGame = section('Par jeu (victoires / parties)');
   byGame.append(statsTable({
     players,
-    rows: played.map((k) => [`${GAMES[k].icon} ${GAMES[k].name}`, ...players.map((s) => (s.byGame[k] ? `${s.byGame[k].wins} / ${s.byGame[k].played}` : '—'))]),
+    rows: played.map((k) => [order.includes(k) ? `${kinds.get(k).icon} ${kinds.get(k).name}` : kinds.get(k).name,
+      ...players.map((s) => (s.byGame[k] ? `${s.byGame[k].wins} / ${s.byGame[k].played}` : '—'))]),
   }));
   box.append(byGame);
 
@@ -243,7 +252,7 @@ function records(list) {
 
 function gameRow(g) {
   const row = el('div', 'past-game');
-  const info = GAMES[g.game] || { name: g.game, icon: '•', color: '#888' };
+  const info = gameInfo(g);
   const icon = el('span', 'past-game-icon', info.icon);
   icon.style.background = info.color;
   const body = el('div', 'past-game-body');
@@ -257,7 +266,8 @@ function gameRow(g) {
     seen.add(p.team || p.id);
     const mates = p.team ? order.filter((o) => o.team === p.team) : [p];
     const names = mates.map((m) => who(m).name).join(' & ');
-    parts.push(`${g.winners.includes(p.id) ? '🏆 ' : ''}${names} ${fmt(p.score)}`);
+    // A game with a single winner (entered by hand) has no points to show.
+    parts.push(`${g.winners.includes(p.id) ? '🏆 ' : ''}${names}${g.mode === 'winner' ? '' : ` ${fmt(p.score)}`}`);
   }
   body.append(el('div', 'past-game-scores', parts.join(' · ')));
   const del = el('button', 'past-btn del', '✕');

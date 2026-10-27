@@ -15,6 +15,14 @@ const GAMES = {
   flechettes: { name: 'Fléchettes', icon: '◎', color: '#6a1b9a' },
 };
 
+// Games played outside the app and entered by hand are recorded as
+// { game: 'autre', title, mode: 'winner' | 'points' }.
+const gameKey = (g) => (g.game === 'autre' ? `autre:${g.title}` : g.game);
+function gameInfo(g) {
+  if (g.game === 'autre') return { name: g.title, icon: (g.title || '?').charAt(0).toUpperCase(), color: '#546e7a' };
+  return GAMES[g.game] || { name: g.game, icon: '•', color: '#888' };
+}
+
 let roster = loadJSON(ROSTER_KEY) || [];
 
 const saveRoster = () => saveJSON(ROSTER_KEY, roster);
@@ -151,7 +159,7 @@ function unrecordGame(gameId) {
 const BACKUP_KEYS = [
   ROSTER_KEY, HISTORY_KEY,
   'dix-mille-state-v1', 'yams-state-v1', 'scoppa-state-v1', 'flechettes-state-v1',
-  'dix-mille-sound', 'dix-mille-wake', 'joueurs-period',
+  'dix-mille-sound', 'dix-mille-wake', 'joueurs-period', 'autre-draft-v1',
 ];
 const BACKUP_APP = 'feuilles-de-score';
 

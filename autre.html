@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f1ea" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121412" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Scores">
+  <title>Autre jeu</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="home">
+  <header class="topbar">
+    <div class="title">
+      <a class="icon-btn back" href="./" aria-label="Accueil">‹</a>
+      <h1>Autre jeu</h1>
+    </div>
+    <div class="topbar-actions">
+      <button id="fsBtn" class="icon-btn" type="button" title="Plein écran" aria-label="Plein écran">⛶</button>
+    </div>
+  </header>
+
+  <main class="global">
+    <p class="stats-note">Pour garder dans les statistiques une partie jouée sans l’app (tarot, belote, Uno…).</p>
+
+    <section class="g-section">
+      <h2>Jeu</h2>
+      <input id="title" class="name-input title-input" maxlength="30" autocomplete="off" enterkeyhint="done" placeholder="Nom du jeu">
+      <div id="titles" class="chips titles"></div>
+    </section>
+
+    <section class="g-section">
+      <h2>Comment on gagne</h2>
+      <div id="mode" class="chips"></div>
+      <div id="lowRow" class="chips low-row" hidden></div>
+    </section>
+
+    <section class="g-section">
+      <h2>Joueurs</h2>
+      <div id="who" class="chips"></div>
+    </section>
+
+    <section class="g-section">
+      <h2>Résultat</h2>
+      <div id="result" class="roster-list"></div>
+      <button id="saveBtn" class="wide-btn primary save-btn" type="button">Enregistrer</button>
+    </section>
+
+    <section id="savedSection" class="g-section" hidden>
+      <h2>Parties ajoutées</h2>
+      <div id="saved"></div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="common.js"></script>
+  <script src="roster.js"></script>
+  <script src="autre.js"></script>
+</body>
+</html>

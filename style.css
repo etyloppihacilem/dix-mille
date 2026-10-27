@@ -767,3 +767,13 @@ body.home { overflow-y: auto; }
   border: 3px solid #fff; border-radius: 16px;
   box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .35);
 }
+
+/* ---- Other game entered by hand ---- */
+.title-input { width: 100%; font-size: 1.1rem; padding: 12px; }
+.titles { margin-top: 8px; }
+.low-row { margin-top: 8px; }
+.result-row { padding: 6px 8px 6px 10px; }
+.score-input { flex: 0 0 96px; text-align: right; font-variant-numeric: tabular-nums; }
+.win-btn { padding: 8px 10px; font-size: .85rem; }
+.save-btn { width: 100%; margin-top: 4px; }
+.save-btn:disabled { opacity: .5; }

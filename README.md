@@ -48,6 +48,17 @@ La page d'accueil propose trois jeux :
 - Il faut arriver **exactement à 0** : une volée qui ferait passer sous 0 est
   annulée (« dépassé ») et la main passe au joueur suivant.
 
+## Autre jeu (`autre.html`)
+
+Pour garder dans les statistiques une partie jouée sans l'app (tarot, belote, Uno…) :
+nom du jeu (les noms déjà utilisés sont proposés), joueurs, puis
+- **un seul vainqueur** : on touche le gagnant (1 point, 0 pour les autres) ;
+- **aux points** : les points de chacun (± pour un score négatif), le plus haut ou le
+  plus bas gagnant.
+
+La partie compte comme les autres dans les statistiques globales, avec une ligne par
+nom de jeu dans le détail par jeu.
+
 ## Joueurs & statistiques globales (`joueurs.html`)
 
 - Les joueurs sont communs à tous les jeux : nom, couleur et ordre se règlent sur
