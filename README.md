@@ -63,6 +63,25 @@ La page d'accueil propose trois jeux :
   classement (victoires, parties, %), détail par jeu, courbe des victoires cumulées,
   records et liste des dernières parties (une partie peut en être retirée).
 
+- **Classement** à l'indice : victoires ÷ victoires attendues au hasard (selon le nombre
+  d'adversaires de chaque partie), avec une partie moyenne ajoutée pour ne pas favoriser
+  ceux qui ont peu joué. 1 = dans la moyenne. Les joueurs qui ne jouent pas toujours
+  ensemble restent ainsi comparables.
+- **Invités** (« + Invité » dans un jeu ou sur cette page, ou bouton « Invité » d'un
+  joueur) : ils jouent normalement mais ne comptent pas dans les statistiques globales.
+- **Partage entre téléphones** : bouton « QR » d'un joueur ou « QR de tous les joueurs »,
+  puis « 📷 Scanner un QR code » sur l'autre téléphone. Un joueur du même nom y devient
+  le même joueur (ses parties sont conservées), pour que les deux téléphones le
+  reconnaissent.
+- **Sauvegarde** : « Exporter » produit un fichier JSON avec tout ce qui est enregistré
+  (joueurs, parties en cours, historique) ; « Importer… » remplace les données du
+  téléphone par une sauvegarde.
+
+Lecture des QR codes reprise de QRProtec : `BarcodeDetector` natif quand il existe, sinon
+zxing-cpp en WebAssembly dans un worker (`decoder.js`), avec jsQR en secours
+(`camera-scan.js`). Bibliothèques copiées dans `vendor/` avec leurs licences :
+zxing-wasm (MIT), jsQR (Apache 2.0), qrcode-generator (MIT).
+
 ## Statistiques de partie
 
 À la fin de la partie, un écran de statistiques s'ouvre (aussi accessible à tout

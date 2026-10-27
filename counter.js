@@ -422,7 +422,10 @@ function render() {
       onChange: save, onRemove: removePlayer, rerender: render,
       removeText: (p) => `Retirer ${p.name} de cette partie ?`,
     });
-    renderRosterPicker($('#rosterPicker'), state.players, (r) => addPlayer(r), () => addPlayer(newRosterPlayer(), true));
+    renderRosterPicker($('#rosterPicker'), state.players, (r) => addPlayer(r), () => addPlayer(newRosterPlayer(), true), () => {
+      const g = newGuest();
+      if (g) addPlayer(g);
+    });
     renderTargetChoices();
   } else {
     renderList();

@@ -33,7 +33,29 @@
       <h2>Gérer les joueurs</h2>
       <p class="stats-note">Les mêmes joueurs servent pour tous les jeux : nom, couleur et ordre se règlent ici.</p>
       <div id="players" class="roster-list"></div>
-      <button id="newPlayerBtn" class="wide-btn" type="button">+ Nouveau joueur</button>
+      <div class="btn-row">
+        <button id="newPlayerBtn" class="wide-btn" type="button">+ Nouveau joueur</button>
+        <button id="newGuestBtn" class="wide-btn" type="button">+ Invité</button>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2>Partager entre téléphones</h2>
+      <p class="stats-note">Affiche le QR code d’un joueur (bouton QR) ou de tous, et scanne-le depuis l’autre téléphone : les deux reconnaissent alors le même joueur.</p>
+      <div class="btn-row">
+        <button id="scanBtn" class="wide-btn primary" type="button">📷 Scanner un QR code</button>
+        <button id="qrAllBtn" class="wide-btn" type="button">QR de tous les joueurs</button>
+      </div>
+    </section>
+
+    <section class="g-section">
+      <h2>Sauvegarde</h2>
+      <p class="stats-note">Un fichier JSON avec tout ce qui est enregistré sur ce téléphone : joueurs, parties en cours et historique.</p>
+      <div class="btn-row">
+        <button id="exportBtn" class="wide-btn" type="button">Exporter</button>
+        <button id="importBtn" class="wide-btn" type="button">Importer…</button>
+      </div>
+      <input id="importFile" type="file" accept="application/json,.json" hidden>
     </section>
   </main>
 
@@ -42,6 +64,9 @@
   <script src="common.js"></script>
   <script src="roster.js"></script>
   <script src="stats.js"></script>
+  <script src="vendor/qrcode.js"></script>
+  <script src="vendor/jsQR.js"></script>
+  <script src="camera-scan.js"></script>
   <script src="joueurs.js"></script>
 </body>
 </html>

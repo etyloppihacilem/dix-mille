@@ -46,8 +46,13 @@ const el = (tag, cls, text) => {
 // Name and color of a player in a record: the roster's if they still exist.
 const who = (p) => {
   const r = rosterById(p.id);
-  return r ? { id: p.id, name: r.name, color: r.color } : { id: p.id, name: p.name, color: p.color };
+  return r
+    ? { id: p.id, name: r.name, color: r.color, guest: !!r.guest }
+    : { id: p.id, name: p.name, color: p.color, guest: !!p.guest };
 };
+
+// Sides of a game: one per player, or one per team at the scoppa.
+const sides = (g) => new Set(g.players.map((p) => p.team || p.id)).size;
 
 function games() {
   const [start, end] = range();
@@ -116,39 +121,55 @@ function renderStats() {
     return;
   }
 
-  // Per player totals.
+  // Per player totals (guests play but are not ranked).
   const per = new Map();
   const get = (p) => {
     const w = who(p);
-    if (!per.has(w.id)) per.set(w.id, { ...w, played: 0, wins: 0, byGame: {} });
+    if (!per.has(w.id)) per.set(w.id, { ...w, played: 0, wins: 0, expected: 0, byGame: {} });
     return per.get(w.id);
   };
   for (const g of list) {
     for (const p of g.players) {
+      if (who(p).guest) continue;
       const s = get(p);
       const won = g.winners.includes(p.id);
       s.played++;
+      // Wins expected if every side had the same chance.
+      s.expected += 1 / sides(g);
       if (won) s.wins++;
       const bg = (s.byGame[g.game] = s.byGame[g.game] || { played: 0, wins: 0 });
       bg.played++;
       if (won) bg.wins++;
     }
   }
-  const players = [...per.values()].sort((a, b) => b.wins - a.wins || b.wins / b.played - a.wins / a.played);
+  /* Ranking index: wins divided by the wins expected at random (which
+     depends on how many sides each game had), with one average game added
+     to both so that a player with few games is not ranked on luck alone.
+     1 = average, 1.5 = half as many wins again as expected. */
+  for (const s of per.values()) s.index = (s.wins + 1) / (s.expected + 1);
+  const players = [...per.values()].sort((a, b) => b.index - a.index || b.wins - a.wins);
+  const n = list.length;
+  if (!players.length) {
+    box.append(el('p', 'empty', `${n} partie${n > 1 ? 's' : ''}, mais seulement entre invités.`));
+    return;
+  }
   const pct = (s) => `${Math.round((100 * s.wins) / s.played)} %`;
+  const dec = (v, d) => v.toLocaleString('fr-FR', { minimumFractionDigits: d, maximumFractionDigits: d });
 
-  const head = el('p', 'stats-headline', `${list.length} partie${list.length > 1 ? 's' : ''} · 🏆 ${players[0].name} en tête avec ${players[0].wins} victoire${players[0].wins > 1 ? 's' : ''}`);
-  box.append(head);
+  box.append(el('p', 'stats-headline', `${n} partie${n > 1 ? 's' : ''} · 🏆 ${players[0].name} en tête (indice ${dec(players[0].index, 2)})`));
 
   const rank = section('Classement');
   rank.append(statsTable({
-    players,
+    players: players.map((s, i) => ({ ...s, name: `${i + 1}. ${s.name}` })),
     rows: [
+      ['Indice', ...players.map((s) => dec(s.index, 2))],
       ['Victoires', ...players.map((s) => s.wins)],
       ['Parties', ...players.map((s) => s.played)],
       ['% de victoires', ...players.map(pct)],
+      ['Victoires attendues', ...players.map((s) => dec(s.expected, 1))],
     ],
   }));
+  rank.append(el('p', 'stats-note', 'Indice = victoires ÷ victoires attendues au hasard, selon le nombre d’adversaires de chaque partie, en comptant une partie moyenne de plus pour ne pas favoriser ceux qui ont peu joué. 1 = dans la moyenne. Les invités ne sont pas classés.'));
   box.append(rank);
 
   const played = Object.keys(GAMES).filter((k) => list.some((g) => g.game === k));
@@ -197,6 +218,7 @@ function records(list) {
     let top = null;
     for (const g of list.filter((x) => x.game === game)) {
       for (const p of g.players) {
+        if (who(p).guest) continue;
         const v = pick(g, p);
         if (v != null && (!top || v.cmp > top.cmp)) top = { ...v, p: who(p), at: g.endedAt };
       }
@@ -263,13 +285,187 @@ function renderRoster() {
     },
     rerender: () => { renderRoster(); renderStats(); },
     removeText: (p) => `Supprimer ${p.name} de la liste des joueurs ? Ses parties restent dans l’historique.`,
+    extra: (p) => {
+      const box = el('div', 'roster-extra');
+      const guest = el('button', 'mini-btn' + (p.guest ? ' on' : ''), 'Invité');
+      guest.type = 'button';
+      guest.title = 'Un invité joue normalement mais ne compte pas dans les statistiques globales';
+      guest.setAttribute('aria-pressed', !!p.guest);
+      guest.addEventListener('click', () => {
+        if (p.guest) delete p.guest; else p.guest = true;
+        saveRoster();
+        renderRoster();
+        renderStats();
+      });
+      const qr = el('button', 'mini-btn', 'QR');
+      qr.type = 'button';
+      qr.setAttribute('aria-label', `QR code de ${p.name}`);
+      qr.addEventListener('click', () => showQr([p]));
+      box.append(guest, qr);
+      return box;
+    },
   });
+}
+
+/* ---------- Sharing players between phones ---------- */
+
+function sheet(title) {
+  closeStats();
+  const overlay = el('div', 'stats-overlay');
+  overlay.id = 'statsOverlay';
+  const body = el('div', 'stats-sheet');
+  body.setAttribute('role', 'dialog');
+  body.setAttribute('aria-label', title);
+  const head = el('div', 'stats-head');
+  const close = el('button', 'icon-btn', '✕');
+  close.type = 'button';
+  close.setAttribute('aria-label', 'Fermer');
+  close.addEventListener('click', closeStats);
+  head.append(el('h2', '', title), close);
+  body.append(head);
+  overlay.append(body);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeStats(); });
+  document.body.append(overlay);
+  return body;
+}
+
+function showQr(players) {
+  const body = sheet(players.length === 1 ? players[0].name : 'Tous les joueurs');
+  const qr = qrcode(0, 'M');
+  qr.addData(encodeProfiles(players), 'Byte');
+  qr.make();
+  const box = el('div', 'qr-box');
+  box.innerHTML = qr.createSvgTag({ cellSize: 4, margin: 4, scalable: true });
+  body.append(box);
+  body.append(el('p', 'stats-note', `${players.map((p) => p.name).join(', ')}. Sur l’autre téléphone : ★ Joueurs & statistiques → « Scanner un QR code », puis vise ce code.`));
+}
+
+const scan = { stream: null, reader: null };
+
+async function openScanner() {
+  const body = sheet('Scanner un QR code');
+  body.classList.add('scan-sheet');
+  const view = el('div', 'scan-view');
+  const video = el('video');
+  video.setAttribute('playsinline', '');
+  video.muted = true;
+  const mark = el('span', 'scan-mark');
+  view.append(video, mark);
+  const status = el('p', 'stats-note', 'Vise le QR code affiché sur l’autre téléphone.');
+  body.append(view, status);
+  // Closing the sheet (✕, outside tap, Échap) releases the camera.
+  new MutationObserver((_, obs) => {
+    if (!document.body.contains(body)) { stopScanner(); obs.disconnect(); }
+  }).observe(document.body, { childList: true });
+
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    status.textContent = 'La caméra n’est pas disponible sur ce navigateur.';
+    return;
+  }
+  let media;
+  try {
+    media = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } },
+    });
+  } catch (e) {
+    status.textContent = `Caméra refusée ou indisponible : ${e.message}`;
+    return;
+  }
+  if (!document.body.contains(body)) { media.getTracks().forEach((t) => t.stop()); return; }
+  scan.stream = media;
+  video.srcObject = media;
+  await video.play().catch(() => {});
+  scan.reader = window.CameraScan.create(video, mark);
+  await scan.reader.prepare();
+  while (scan.stream === media) {
+    try {
+      const text = await scan.reader.detect();
+      if (text) {
+        const players = decodeProfiles(text);
+        if (players && players.length) { stopScanner(); closeStats(); receive(players); return; }
+        status.textContent = 'Ce QR code ne contient pas de joueurs.';
+      }
+    } catch (e) { /* image illisible */ }
+    await new Promise((r) => setTimeout(r, scan.reader.delay()));
+  }
+}
+
+function stopScanner() {
+  if (scan.stream) scan.stream.getTracks().forEach((t) => t.stop());
+  scan.stream = null;
+}
+
+function receive(players) {
+  sfx.add();
+  const twins = players.filter((p) => !rosterById(p.id) && roster.some((r) => sameName(r.name, p.name)));
+  const names = players.map((p) => p.name).join(', ');
+  const note = twins.length ? `\n\n${twins.map((p) => p.name).join(', ')} existe déjà ici : ce sera le même joueur (ses parties sont conservées).` : '';
+  if (!confirm(`Recevoir ${players.length > 1 ? 'ces joueurs' : 'ce joueur'} : ${names} ?${note}`)) return;
+  const { added, updated, merged } = receiveProfiles(players);
+  const parts = [];
+  if (added.length) parts.push(`${added.length} ajouté${added.length > 1 ? 's' : ''}`);
+  if (updated.length) parts.push(`${updated.length} mis à jour`);
+  if (merged.length) parts.push(`${merged.length} fusionné${merged.length > 1 ? 's' : ''}`);
+  toast(parts.join(', ') || 'Rien de nouveau', 2500);
+  renderRoster();
+  renderStats();
+}
+
+/* ---------- Backup file ---------- */
+
+async function exportBackup() {
+  const json = JSON.stringify(backupData(), null, 1);
+  const name = `feuilles-de-score-${new Date().toISOString().slice(0, 10)}.json`;
+  const file = new File([json], name, { type: 'application/json' });
+  // Phones: the share sheet saves the file (Fichiers, Drive, e-mail…).
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: 'Sauvegarde des scores' }); return; } catch (e) {
+      if (e.name === 'AbortError') return;
+    }
+  }
+  const url = URL.createObjectURL(file);
+  const a = el('a');
+  a.href = url;
+  a.download = name;
+  document.body.append(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+}
+
+function importBackup(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    let backup = null;
+    try { backup = JSON.parse(reader.result); } catch (e) { /* not JSON */ }
+    if (!backup || backup.app !== BACKUP_APP) { toast('Ce fichier n’est pas une sauvegarde des scores', 3000); return; }
+    const date = backup.exportedAt ? new Date(backup.exportedAt).toLocaleString('fr-FR') : 'date inconnue';
+    if (!confirm(`Remplacer toutes les données de ce téléphone (joueurs, parties en cours, historique) par la sauvegarde du ${date} ?`)) return;
+    restoreBackup(backup);
+    location.reload();
+  };
+  reader.readAsText(file);
 }
 
 $('#newPlayerBtn').addEventListener('click', () => {
   const p = newRosterPlayer();
   renderRoster();
   focusName(p.id);
+});
+$('#newGuestBtn').addEventListener('click', () => {
+  if (newGuest()) { renderRoster(); renderStats(); }
+});
+$('#scanBtn').addEventListener('click', openScanner);
+$('#qrAllBtn').addEventListener('click', () => {
+  if (!roster.length) { toast('Aucun joueur à partager'); return; }
+  showQr(roster);
+});
+$('#exportBtn').addEventListener('click', exportBackup);
+$('#importBtn').addEventListener('click', () => $('#importFile').click());
+$('#importFile').addEventListener('change', (e) => {
+  if (e.target.files[0]) importBackup(e.target.files[0]);
+  e.target.value = '';
 });
 // Names typed in the roster show up in the statistics once editing is done.
 $('#players').addEventListener('focusout', () => renderStats());

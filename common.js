@@ -268,7 +268,8 @@ function makeHandle(row, listEl, onDone) {
 // Renders editable rows (handle, color, name, delete) for `players` into
 // `listEl`. `opts.onChange()` persists, `opts.onRemove(id)` deletes,
 // `opts.rerender()` redraws the whole page after a reorder,
-// `opts.removeText(p)` words the confirmation of a removal.
+// `opts.removeText(p)` words the confirmation of a removal, `opts.extra(p)`
+// returns an element added before the delete button.
 let paletteFor = null;
 function renderPlayerEditor(listEl, players, opts) {
   listEl.textContent = '';
@@ -309,7 +310,7 @@ function renderPlayerEditor(listEl, players, opts) {
     del.addEventListener('click', () => {
       if (confirm(opts.removeText ? opts.removeText(p) : `Supprimer ${p.name} ?`)) opts.onRemove(p.id);
     });
-    row.append(dot, name, del);
+    row.append(dot, name, ...(opts.extra ? [opts.extra(p)] : []), del);
     listEl.append(row);
 
     if (paletteFor === p.id) {

@@ -395,7 +395,7 @@ function renderTeamEditor(box) {
     const chips = el('div', 'chips');
     for (const r of roster) {
       const other = state.players.find((o) => o !== t && o.members.includes(r.id));
-      const b = el('button', 'chip roster-chip' + (t.members.includes(r.id) ? ' on' : '') + (other ? ' taken' : ''), r.name);
+      const b = el('button', 'chip roster-chip' + (t.members.includes(r.id) ? ' on' : '') + (other ? ' taken' : '') + (r.guest ? ' guest' : ''), r.name);
       b.type = 'button';
       b.style.setProperty('--pc', r.color);
       b.addEventListener('click', () => toggleMember(t, r.id));
@@ -412,7 +412,10 @@ function renderTeamEditor(box) {
   const np = el('button', 'chip roster-new', '+ Nouveau joueur');
   np.type = 'button';
   np.addEventListener('click', newPlayer);
-  add.append(nt, np);
+  const ng = el('button', 'chip roster-new', '+ Invité');
+  ng.type = 'button';
+  ng.addEventListener('click', () => { if (newGuest()) render(); });
+  add.append(nt, np, ng);
   box.append(add);
 }
 
