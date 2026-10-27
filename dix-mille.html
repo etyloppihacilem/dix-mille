@@ -62,7 +62,7 @@
   </section>
 
   <section id="editPanel" class="panel edit-panel" hidden>
-    <button id="addPlayerBtn" class="wide-btn" type="button">+ Ajouter un joueur</button>
+    <div id="rosterPicker" class="chips roster-picker"></div>
     <button id="statsBtn" class="wide-btn" type="button">📊 Statistiques de la partie</button>
     <button id="newGameBtn" class="wide-btn danger" type="button">Nouvelle partie (scores à 0)</button>
     <button id="doneBtn" class="wide-btn primary" type="button">Jouer</button>
@@ -70,8 +70,9 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script>window.GAME = { storageKey: 'dix-mille-state-v1', target: 10000, defaultName: 'Joueur', maxDigits: 6 };</script>
+  <script>window.GAME = { game: 'dix-mille', storageKey: 'dix-mille-state-v1', target: 10000, defaultName: 'Joueur', maxDigits: 6 };</script>
   <script src="common.js"></script>
+  <script src="roster.js"></script>
   <script src="stats.js"></script>
   <script src="counter.js"></script>
 </body>

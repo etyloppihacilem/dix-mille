@@ -29,8 +29,9 @@ const rowByKey = (k) => ROWS.find((r) => r.key === k);
 /* ---------- State ---------- */
 
 function defaultState() {
-  const players = [1, 2].map((n, i) => ({ id: uid(), name: `Joueur ${n}`, color: COLORS[i * 5] }));
+  const players = defaultRosterPlayers().map(({ id, name, color }) => ({ id, name, color }));
   return {
+    gameId: uid(), // identifies the game in the global history
     players,
     cells: {},     // { playerId: { rowKey: points } }
     turnId: players[0].id,
@@ -42,9 +43,10 @@ function defaultState() {
 }
 
 function loadState() {
-  const s = loadJSON(STORAGE_KEY);
-  if (s && Array.isArray(s.players)) return { ...defaultState(), ...s, sel: null };
-  return defaultState();
+  let s = loadJSON(STORAGE_KEY);
+  if (!s || !Array.isArray(s.players)) return defaultState();
+  s = linkToRoster(s, (st) => st.players);
+  return { ...defaultState(), ...s, sel: null };
 }
 
 let state = loadState();
@@ -55,6 +57,21 @@ let pick = [];  // faces picked for a `combo` row: [combination, other dice…]
 function save() {
   const { sel, ...rest } = state;
   saveJSON(STORAGE_KEY, rest);
+  pushToRoster(state.players);
+  syncRecord();
+}
+
+// A full grid is recorded in the global history; an incomplete one is not.
+function syncRecord() {
+  const done = state.players.length && state.players.every((p) => isComplete(p.id));
+  if (!done) { unrecordGame(state.gameId); return; }
+  const best = Math.max(...state.players.map((p) => totals(p.id).total));
+  recordGame({
+    gameId: state.gameId,
+    game: 'yams',
+    players: state.players.map((p) => ({ id: p.id, name: p.name, color: p.color, score: totals(p.id).total, turns: PLAY_ROWS.length })),
+    winners: state.players.filter((p) => totals(p.id).total === best).map((p) => p.id),
+  });
 }
 
 const byId = (id) => state.players.find((p) => p.id === id);
@@ -231,13 +248,12 @@ function commit(value) {
   render();
 }
 
-function addPlayer() {
-  const p = { id: uid(), name: `Joueur ${state.players.length + 1}`, color: freeColor(state.players) };
-  state.players.push(p);
+function addPlayer(r, focus) {
+  state.players.push({ id: r.id, name: r.name, color: r.color });
   ensureIds();
   save();
   render();
-  focusName(p.id);
+  if (focus) focusName(r.id);
 }
 
 function removePlayer(id) {
@@ -252,6 +268,7 @@ function removePlayer(id) {
 function newGame() {
   if (!confirm('Effacer toutes les feuilles de score ?')) return;
   state.cells = {};
+  state.gameId = uid();
   state.log = [];
   state.history = [];
   state.redo = [];
@@ -285,7 +302,13 @@ function render() {
   gridEl.hidden = editing;
   listEl.hidden = !editing;
   $('#editBtn').textContent = editing ? 'Terminé' : 'Joueurs';
-  if (editing) renderPlayerEditor(listEl, state.players, { onChange: save, onRemove: removePlayer, rerender: render });
+  if (editing) {
+    renderPlayerEditor(listEl, state.players, {
+      onChange: save, onRemove: removePlayer, rerender: render,
+      removeText: (p) => `Retirer ${p.name} de cette partie ? Sa feuille sera effacée.`,
+    });
+    renderRosterPicker($('#rosterPicker'), state.players, (r) => addPlayer(r), () => addPlayer(newRosterPlayer(), true));
+  }
   else renderGrid();
   renderEntry();
 }
@@ -528,7 +551,6 @@ $('#undoBtn').addEventListener('click', () => { undo(); save(); render(); });
 $('#redoBtn').addEventListener('click', () => { redo(); save(); render(); });
 $('#editBtn').addEventListener('click', () => setEditing(!editing));
 $('#doneBtn').addEventListener('click', () => setEditing(false));
-$('#addPlayerBtn').addEventListener('click', addPlayer);
 $('#newGameBtn').addEventListener('click', newGame);
 $('#statsBtn').addEventListener('click', showStats);
 $('#endStatsBtn').addEventListener('click', showStats);

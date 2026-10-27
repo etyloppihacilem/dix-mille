@@ -48,7 +48,21 @@ La page d'accueil propose trois jeux :
 - Il faut arriver **exactement à 0** : une volée qui ferait passer sous 0 est
   annulée (« dépassé ») et la main passe au joueur suivant.
 
-## Statistiques
+## Joueurs & statistiques globales (`joueurs.html`)
+
+- Les joueurs sont communs à tous les jeux : nom, couleur et ordre se règlent sur
+  cette page (ou dans le menu *Joueurs* d'un jeu, qui les met à jour partout).
+  Dans un jeu, on ajoute un joueur de la liste d'un toucher, ou on en crée un nouveau.
+- À la scoppa, une équipe est composée de joueurs de la liste : son nom suit ses
+  membres (« Alice & Bob ») et la victoire compte pour chacun.
+- Chaque partie terminée est enregistrée (dix-mille : bouton « 🏁 Fin » ; yams :
+  grille pleine ; scoppa : objectif atteint ; fléchettes : pile à 0). Une annulation
+  qui défait la fin retire la partie.
+- Statistiques sur les dernières 24 h, les 7 derniers jours ou depuis toujours :
+  classement (victoires, parties, %), détail par jeu, courbe des victoires cumulées,
+  records et liste des dernières parties (une partie peut en être retirée).
+
+## Statistiques de partie
 
 À la fin de la partie, un écran de statistiques s'ouvre (aussi accessible à tout
 moment depuis le menu *Joueurs / Équipes*) :

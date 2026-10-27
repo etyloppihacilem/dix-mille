@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#f3f1ea" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#121412" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Scores">
+  <title>Joueurs</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="home">
+  <header class="topbar">
+    <div class="title">
+      <a class="icon-btn back" href="./" aria-label="Accueil">‹</a>
+      <h1>Joueurs &amp; statistiques</h1>
+    </div>
+    <div class="topbar-actions">
+      <button id="fsBtn" class="icon-btn" type="button" title="Plein écran" aria-label="Plein écran">⛶</button>
+    </div>
+  </header>
+
+  <main class="global">
+    <div id="globalStats"></div>
+
+    <section class="g-section">
+      <h2>Gérer les joueurs</h2>
+      <p class="stats-note">Les mêmes joueurs servent pour tous les jeux : nom, couleur et ordre se règlent ici.</p>
+      <div id="players" class="roster-list"></div>
+      <button id="newPlayerBtn" class="wide-btn" type="button">+ Nouveau joueur</button>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="common.js"></script>
+  <script src="roster.js"></script>
+  <script src="stats.js"></script>
+  <script src="joueurs.js"></script>
+</body>
+</html>

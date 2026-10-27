@@ -16,9 +16,20 @@ const POINTS = [
 
 const emptyManche = () => ({ points: {}, scopes: {} });
 
+// Teams are made of roster players; a team's name and color follow its members.
+function refreshTeams(st) {
+  for (const t of st.players) {
+    t.members = (t.members || []).filter((id) => rosterById(id));
+    if (!t.members.length) continue;
+    t.name = t.members.map((id) => rosterById(id).name).join(' & ');
+    t.color = rosterById(t.members[0]).color;
+  }
+}
+
 function defaultState() {
-  const players = [1, 2].map((n, i) => ({ id: uid(), name: `Équipe ${n}`, color: COLORS[i * 5] }));
+  const players = defaultRosterPlayers().map((r) => ({ id: uid(), members: [r.id], name: r.name, color: r.color }));
   return {
+    gameId: uid(), // identifies the game in the global history
     players,
     target: 21,
     manches: [],          // validated manches, oldest first
@@ -42,13 +53,42 @@ function loadState() {
     state.history = [];
     state.redo = [];
   }
+  // Teams saved before the shared roster: a team named after a player
+  // becomes that player's team.
+  for (const t of state.players) {
+    if (Array.isArray(t.members)) continue;
+    t.members = [];
+    if (/^Équipe \d+$/.test(t.name)) continue;
+    const r = roster.find((p) => sameName(p.name, t.name)) || newRosterPlayer(t.name);
+    t.members.push(r.id);
+  }
+  refreshTeams(state);
   return state;
 }
 
 let state = loadState();
 let editing = false;
 
-const save = () => saveJSON(STORAGE_KEY, state);
+function save() {
+  saveJSON(STORAGE_KEY, state);
+  syncRecord();
+}
+
+// A won game is recorded in the global history for every member of every
+// team; it is removed again if an undo takes the win back.
+function syncRecord() {
+  const w = winner();
+  const teams = state.players.filter((t) => t.members.length);
+  if (!w || !teams.length) { unrecordGame(state.gameId); return; }
+  recordGame({
+    gameId: state.gameId,
+    game: 'scoppa',
+    players: teams.flatMap((t) => t.members.map((id) => ({
+      id, name: rosterById(id).name, color: rosterById(id).color, score: total(t.id), team: t.name, turns: state.manches.length,
+    }))),
+    winners: w.members,
+  });
+}
 const byId = (id) => state.players.find((p) => p.id === id);
 
 function mancheScore(m, pid) {
@@ -308,23 +348,78 @@ function deleteManche(i) {
   });
 }
 
-function addPlayer() {
-  const p = { id: uid(), name: `Équipe ${state.players.length + 1}`, color: freeColor(state.players) };
-  state.players.push(p);
+function addTeam() {
+  state.players.push({ id: uid(), members: [], name: `Équipe ${state.players.length + 1}`, color: freeColor(state.players) });
   save();
   render();
-  focusName(p.id);
 }
 
-function removePlayer(id) {
-  state.players = state.players.filter((p) => p.id !== id);
+function removeTeam(t) {
+  if (!confirm(`Retirer l’équipe ${t.name} de la partie ?`)) return;
+  state.players = state.players.filter((p) => p !== t);
   save();
   render();
+}
+
+// A player belongs to one team at most: tapping moves them to this team,
+// tapping again takes them out.
+function toggleMember(team, pid) {
+  const was = team.members.includes(pid);
+  for (const t of state.players) t.members = t.members.filter((id) => id !== pid);
+  if (!was) team.members.push(pid);
+  refreshTeams(state);
+  save();
+  render();
+}
+
+function newPlayer() {
+  const name = prompt('Nom du nouveau joueur :');
+  if (name == null) return;
+  newRosterPlayer(name.trim());
+  render();
+}
+
+function renderTeamEditor(box) {
+  box.textContent = '';
+  state.players.forEach((t, i) => {
+    const card = el('section', 'team-edit');
+    card.style.setProperty('--pc', t.color);
+    const head = el('div', 'team-edit-head');
+    head.append(el('span', 'dot'), el('strong', '', t.members.length ? t.name : `Équipe ${i + 1}`));
+    const del = el('button', 'del-btn', '✕');
+    del.type = 'button';
+    del.setAttribute('aria-label', `Retirer l’équipe ${t.name}`);
+    del.addEventListener('click', () => removeTeam(t));
+    head.append(del);
+    card.append(head);
+    const chips = el('div', 'chips');
+    for (const r of roster) {
+      const other = state.players.find((o) => o !== t && o.members.includes(r.id));
+      const b = el('button', 'chip roster-chip' + (t.members.includes(r.id) ? ' on' : '') + (other ? ' taken' : ''), r.name);
+      b.type = 'button';
+      b.style.setProperty('--pc', r.color);
+      b.addEventListener('click', () => toggleMember(t, r.id));
+      chips.append(b);
+    }
+    if (!t.members.length) chips.append(el('span', 'picker-label', 'Touche les joueurs de cette équipe'));
+    card.append(chips);
+    box.append(card);
+  });
+  const add = el('div', 'chips roster-picker');
+  const nt = el('button', 'chip roster-new', '+ Équipe');
+  nt.type = 'button';
+  nt.addEventListener('click', addTeam);
+  const np = el('button', 'chip roster-new', '+ Nouveau joueur');
+  np.type = 'button';
+  np.addEventListener('click', newPlayer);
+  add.append(nt, np);
+  box.append(add);
 }
 
 function newGame() {
   if (!confirm('Effacer toutes les manches ?')) return;
   state.manches = [];
+  state.gameId = uid();
   state.current = emptyManche();
   state.editIndex = null;
   state.history = [];
@@ -337,10 +432,7 @@ function newGame() {
 function setEditing(on) {
   editing = on;
   leaveEditor();
-  if (!on) {
-    for (const p of state.players) p.name = p.name.trim() || 'Équipe';
-    save();
-  }
+  if (!on) save();
   render();
 }
 
@@ -362,7 +454,7 @@ function render() {
   $('#board').hidden = editing;
   $('#editBtn').textContent = editing ? 'Terminé' : 'Équipes';
   if (editing) {
-    renderPlayerEditor($('#players'), state.players, { onChange: save, onRemove: removePlayer, rerender: render });
+    renderTeamEditor($('#players'));
     renderTargets();
   } else {
     renderBoard();
@@ -539,7 +631,6 @@ $('#undoBtn').addEventListener('click', undo);
 $('#redoBtn').addEventListener('click', redo);
 $('#editBtn').addEventListener('click', () => setEditing(!editing));
 $('#doneBtn').addEventListener('click', () => setEditing(false));
-$('#addPlayerBtn').addEventListener('click', addPlayer);
 $('#newGameBtn').addEventListener('click', newGame);
 $('#statsBtn').addEventListener('click', showStats);
 

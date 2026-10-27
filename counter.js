@@ -21,10 +21,12 @@ const CD = GAME.countdown;
 /* ---------- State ---------- */
 
 function defaultState() {
-  const players = [1, 2].map((n, i) => ({
-    id: uid(), name: `${GAME.defaultName} ${n}`, color: COLORS[i * 5], score: CD ? GAME.target : 0, last: null,
+  const players = defaultRosterPlayers().map((r) => ({
+    id: r.id, name: r.name, color: r.color, score: CD ? GAME.target : 0, last: null,
   }));
   return {
+    gameId: uid(),     // identifies the game in the global history
+    finished: false,   // dix-mille: the players ended the game (🏁 Fin)
     players,
     turnId: players[0].id,     // whose turn it is in the normal rotation
     selectedId: players[0].id, // player whose value is being typed
@@ -39,9 +41,10 @@ function defaultState() {
 }
 
 function loadState() {
-  const s = loadJSON(GAME.storageKey);
-  if (s && Array.isArray(s.players)) return { ...defaultState(), ...s, input: '', negative: false, mode: 'add' };
-  return defaultState();
+  let s = loadJSON(GAME.storageKey);
+  if (!s || !Array.isArray(s.players)) return defaultState();
+  s = linkToRoster(s, (st) => st.players);
+  return { ...defaultState(), ...s, input: '', negative: false, mode: 'add' };
 }
 
 let state = loadState();
@@ -56,6 +59,25 @@ const leadScore = () => (CD ? Math.min(...state.players.map((p) => p.score)) : M
 function save() {
   const { input, negative, ...rest } = state;
   saveJSON(GAME.storageKey, rest);
+  pushToRoster(state.players);
+  syncRecord();
+}
+
+// Keeps the global history in step: a finished game is recorded (and
+// updated if corrected afterwards), an unfinished one is removed.
+function syncRecord() {
+  const done = CD ? state.players.some((p) => p.score === 0) : state.finished;
+  if (!done || !state.players.length) { unrecordGame(state.gameId); return; }
+  const turns = {};
+  for (const e of state.log) if (e.kind === 'add') turns[e.pid] = (turns[e.pid] || 0) + 1;
+  const lead = leadScore();
+  recordGame({
+    gameId: state.gameId,
+    game: GAME.game,
+    lowWins: CD,
+    players: state.players.map((p) => ({ id: p.id, name: p.name, color: p.color, score: p.score, turns: turns[p.id] || 0 })),
+    winners: state.players.filter((p) => p.score === lead).map((p) => p.id),
+  });
 }
 
 const byId = (id) => state.players.find((p) => p.id === id);
@@ -338,16 +360,12 @@ function toggleMode() {
   render();
 }
 
-function addPlayer() {
-  const p = {
-    id: uid(), name: `${GAME.defaultName} ${state.players.length + 1}`,
-    color: freeColor(state.players), score: startScore(), last: null,
-  };
-  state.players.push(p);
+function addPlayer(r, focus) {
+  state.players.push({ id: r.id, name: r.name, color: r.color, score: startScore(), last: null });
   ensureIds();
   save();
   render();
-  focusName(p.id);
+  if (focus) focusName(r.id);
 }
 
 function removePlayer(id) {
@@ -362,6 +380,8 @@ function removePlayer(id) {
 function newGame() {
   if (!confirm(CD ? `Remettre tout le monde à ${startScore()} ?` : 'Remettre tous les scores à 0 ?')) return;
   for (const p of state.players) { p.score = startScore(); p.last = null; }
+  state.gameId = uid();
+  state.finished = false;
   state.history = [];
   state.redo = [];
   state.log = [];
@@ -398,7 +418,11 @@ function render() {
   $('#editPanel').hidden = !editing;
   $('#editBtn').textContent = editing ? 'Terminé' : editLabel;
   if (editing) {
-    renderPlayerEditor(listEl, state.players, { onChange: save, onRemove: removePlayer, rerender: render });
+    renderPlayerEditor(listEl, state.players, {
+      onChange: save, onRemove: removePlayer, rerender: render,
+      removeText: (p) => `Retirer ${p.name} de cette partie ?`,
+    });
+    renderRosterPicker($('#rosterPicker'), state.players, (r) => addPlayer(r), () => addPlayer(newRosterPlayer(), true));
     renderTargetChoices();
   } else {
     renderList();
@@ -495,6 +519,7 @@ function renderEntry() {
   modeBtn.classList.toggle('on', state.mode === 'set');
   $('#redoBtn').hidden = !state.redo.length;
   $('#endStatsBtn').hidden = !targetReached();
+  $('#endStatsBtn').textContent = CD || state.finished ? '📊 Stats' : '🏁 Fin';
   modeBtn.textContent = state.mode === 'set' ? 'Retour' : 'Corriger';
   if (!p) {
     $('#entryDot').style.background = '';
@@ -536,10 +561,13 @@ $('#redoBtn').addEventListener('click', () => {
 });
 $('#editBtn').addEventListener('click', () => setEditing(!editing));
 $('#doneBtn').addEventListener('click', () => setEditing(false));
-$('#addPlayerBtn').addEventListener('click', addPlayer);
 $('#newGameBtn').addEventListener('click', newGame);
 $('#statsBtn').addEventListener('click', showStats);
-$('#endStatsBtn').addEventListener('click', showStats);
+$('#endStatsBtn').addEventListener('click', () => {
+  // Dix-mille: the players decide when the game is over.
+  if (!CD && !state.finished) { state.finished = true; save(); render(); }
+  showStats();
+});
 
 // Physical keyboard support (handy on desktop).
 document.addEventListener('keydown', (e) => {

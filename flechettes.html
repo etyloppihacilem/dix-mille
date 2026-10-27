@@ -64,7 +64,7 @@
       <span>Départ à</span>
       <div id="targetChoices" class="chips"></div>
     </div>
-    <button id="addPlayerBtn" class="wide-btn" type="button">+ Ajouter un joueur</button>
+    <div id="rosterPicker" class="chips roster-picker"></div>
     <button id="statsBtn" class="wide-btn" type="button">📊 Statistiques de la partie</button>
     <button id="newGameBtn" class="wide-btn danger" type="button">Nouvelle partie</button>
     <button id="doneBtn" class="wide-btn primary" type="button">Jouer</button>
@@ -72,8 +72,9 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
-  <script>window.GAME = { storageKey: 'flechettes-state-v1', target: 501, targetChoices: [301, 501, 701], countdown: true, defaultName: 'Joueur', maxDigits: 3 };</script>
+  <script>window.GAME = { game: 'flechettes', storageKey: 'flechettes-state-v1', target: 501, targetChoices: [301, 501, 701], countdown: true, defaultName: 'Joueur', maxDigits: 3 };</script>
   <script src="common.js"></script>
+  <script src="roster.js"></script>
   <script src="stats.js"></script>
   <script src="counter.js"></script>
 </body>
