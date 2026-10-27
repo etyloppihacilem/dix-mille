@@ -15,6 +15,8 @@ let period = 'all';
 try { period = localStorage.getItem('joueurs-period') || 'all'; } catch (e) { /* ignore */ }
 if (!PERIODS.some((p) => p.key === period)) period = 'all';
 let offset = 0; // months or years back from the current one
+let gameFilter = 'all'; // gameKey of the only game shown, or 'all'
+try { gameFilter = localStorage.getItem('joueurs-game') || 'all'; } catch (e) { /* ignore */ }
 
 // [start, end) timestamps of the selected period.
 function range() {
@@ -56,7 +58,44 @@ const sides = (g) => new Set(g.players.map((p) => p.team || p.id)).size;
 
 function games() {
   const [start, end] = range();
-  return loadHistory().filter((g) => g.endedAt >= start && g.endedAt < end).sort((a, b) => a.endedAt - b.endedAt);
+  return loadHistory()
+    .filter((g) => g.endedAt >= start && g.endedAt < end && (gameFilter === 'all' || gameKey(g) === gameFilter))
+    .sort((a, b) => a.endedAt - b.endedAt);
+}
+
+// Every game ever recorded: the app's games first, then the others by name.
+function allKinds() {
+  const kinds = new Map();
+  for (const g of loadHistory()) if (!kinds.has(gameKey(g))) kinds.set(gameKey(g), gameInfo(g));
+  const order = Object.keys(GAMES);
+  return [...kinds.entries()].sort(([a, ia], [b, ib]) => {
+    const oa = order.indexOf(a), ob = order.indexOf(b);
+    if (oa >= 0 || ob >= 0) return (oa < 0 ? 99 : oa) - (ob < 0 ? 99 : ob);
+    return ia.name.localeCompare(ib.name, 'fr');
+  });
+}
+
+function renderGameFilter(box) {
+  const kinds = allKinds();
+  if (gameFilter !== 'all' && !kinds.some(([k]) => k === gameFilter)) gameFilter = 'all';
+  if (kinds.length < 2) return;
+  const row = el('div', 'chips game-filter');
+  const pick = (key, label) => {
+    const b = el('button', 'chip' + (gameFilter === key ? ' on' : ''), label);
+    b.type = 'button';
+    b.addEventListener('click', () => {
+      gameFilter = key;
+      try { localStorage.setItem('joueurs-game', key); } catch (e) { /* ignore */ }
+      renderStats();
+    });
+    row.append(b);
+  };
+  pick('all', 'Tous les jeux');
+  for (const [k, info] of kinds) pick(k, GAMES[k] ? `${info.icon} ${info.name}` : info.name);
+  box.append(row);
+  // Keep the selected game in view in the scrolling row.
+  const on = row.querySelector('.on');
+  if (on) requestAnimationFrame(() => on.scrollIntoView({ block: 'nearest', inline: 'center' }));
 }
 
 function when(ts) {
@@ -112,12 +151,13 @@ function renderStats() {
     nav.append(prev, el('strong', '', rangeLabel()), next);
     box.append(nav);
   }
+  renderGameFilter(box);
 
   const list = games();
   if (!list.length) {
-    box.append(el('p', 'empty', period === 'all'
+    box.append(el('p', 'empty', !loadHistory().length
       ? 'Aucune partie terminée pour l’instant. Les parties s’enregistrent ici à la fin de chaque jeu.'
-      : 'Aucune partie terminée sur cette période.'));
+      : gameFilter !== 'all' ? 'Aucune partie de ce jeu sur cette période.' : 'Aucune partie terminée sur cette période.'));
     return;
   }
 
@@ -195,13 +235,15 @@ function renderStats() {
     if (ia >= 0 || ib >= 0) return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib);
     return kinds.get(a).name.localeCompare(kinds.get(b).name, 'fr');
   });
-  const byGame = section('Par jeu (victoires / parties)');
-  byGame.append(statsTable({
-    players,
-    rows: played.map((k) => [order.includes(k) ? `${kinds.get(k).icon} ${kinds.get(k).name}` : kinds.get(k).name,
-      ...players.map((s) => (s.byGame[k] ? `${s.byGame[k].wins} / ${s.byGame[k].played}` : '—'))]),
-  }));
-  box.append(byGame);
+  if (played.length > 1) {
+    const byGame = section('Par jeu (victoires / parties)');
+    byGame.append(statsTable({
+      players,
+      rows: played.map((k) => [order.includes(k) ? `${kinds.get(k).icon} ${kinds.get(k).name}` : kinds.get(k).name,
+        ...players.map((s) => (s.byGame[k] ? `${s.byGame[k].wins} / ${s.byGame[k].played}` : '—'))]),
+    }));
+    box.append(byGame);
+  }
 
   if (players.length > 1) {
     const duels = section('Duels');

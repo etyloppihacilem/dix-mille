@@ -78,6 +78,8 @@ nom de jeu dans le détail par jeu.
   d'adversaires de chaque partie), avec une partie moyenne ajoutée pour ne pas favoriser
   ceux qui ont peu joué. 1 = dans la moyenne. Les joueurs qui ne jouent pas toujours
   ensemble restent ainsi comparables.
+- **Filtre par jeu** (bulles sous les périodes) : toutes les statistiques, faits marquants
+  et graphiques ne portent alors que sur ce jeu ; il se combine avec la période.
 - **Faits marquants** : plus longue série de victoires, série en cours, plus belle
   journée, grande rivalité, partie la plus serrée, spécialiste d'un jeu, joueur le plus
   assidu, jeu le plus joué, journée la plus chargée.

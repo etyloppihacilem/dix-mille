@@ -159,7 +159,7 @@ function unrecordGame(gameId) {
 const BACKUP_KEYS = [
   ROSTER_KEY, HISTORY_KEY,
   'dix-mille-state-v1', 'yams-state-v1', 'scoppa-state-v1', 'flechettes-state-v1',
-  'dix-mille-sound', 'dix-mille-wake', 'joueurs-period', 'autre-draft-v1',
+  'dix-mille-sound', 'dix-mille-wake', 'joueurs-period', 'joueurs-game', 'autre-draft-v1',
 ];
 const BACKUP_APP = 'feuilles-de-score';
 

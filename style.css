@@ -708,6 +708,12 @@ body.home { overflow-y: auto; }
 .g-section { margin-top: 18px; }
 .g-section h2 { font-size: 1rem; margin: 0 0 8px; }
 .period-tabs { margin-top: 4px; flex-wrap: nowrap; }
+.game-filter {
+  flex-wrap: nowrap; overflow-x: auto; margin: 10px -16px 0; padding: 2px 16px 6px;
+  scrollbar-width: none;
+}
+.game-filter::-webkit-scrollbar { display: none; }
+.game-filter .chip { flex: none; white-space: nowrap; }
 .period-tabs .chip { flex: 1 1 auto; min-width: 0; padding: 8px 6px; }
 .period-nav {
   display: flex; align-items: center; justify-content: space-between;
