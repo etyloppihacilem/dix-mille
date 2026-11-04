@@ -353,6 +353,24 @@ function leaveEditor() {
   if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
 }
 
+/* ---------- Visible height ---------- */
+
+// Installed on recent Android, Chrome draws the app edge to edge and 100dvh
+// can be taller than what is actually shown, hiding the bottom of the
+// keypad behind the navigation bar. The page is sized to the smallest
+// height the browser reports instead.
+function fitAppHeight() {
+  const sizes = [window.innerHeight, document.documentElement.clientHeight];
+  if (window.visualViewport) sizes.push(window.visualViewport.height);
+  const h = Math.min(...sizes.filter((x) => x > 0));
+  if (Number.isFinite(h)) document.documentElement.style.setProperty('--app-height', `${Math.round(h)}px`);
+}
+fitAppHeight();
+window.addEventListener('resize', fitAppHeight);
+window.addEventListener('orientationchange', () => setTimeout(fitAppHeight, 300));
+window.addEventListener('pageshow', fitAppHeight);
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitAppHeight);
+
 /* ---------- Page setup ---------- */
 
 function initChrome() {

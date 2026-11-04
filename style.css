@@ -46,7 +46,8 @@ html, body {
 body {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  /* Measured visible height (common.js), 100dvh until it is known. */
+  height: var(--app-height, 100dvh);
   background: var(--bg);
   color: var(--text);
   font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -255,7 +256,7 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
 .keypad {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: clamp(46px, 8.5dvh, 72px);
+  grid-auto-rows: clamp(46px, calc(var(--app-height, 100dvh) * 0.085), 72px);
   gap: 6px;
 }
 .keypad button {
@@ -276,7 +277,7 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
 
 .keypad button.span2 { grid-column: span 2; }
 .keypad button.ok.span4 { grid-column: span 4; }
-.keypad.compact { grid-auto-rows: clamp(40px, 6.6dvh, 60px); }
+.keypad.compact { grid-auto-rows: clamp(40px, calc(var(--app-height, 100dvh) * 0.066), 60px); }
 
 /* ---- Chips (quick values, target choice) ---- */
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -300,7 +301,7 @@ button.dot { border: 2px solid var(--surface); outline: 2px solid var(--pc); }
 .quick-values .chip { min-width: 0; padding: 10px 0; font-size: 1.05rem; }
 .keypad.yams-pad {
   grid-template-columns: repeat(3, 1fr);
-  grid-auto-rows: clamp(42px, 6.4dvh, 56px);
+  grid-auto-rows: clamp(42px, calc(var(--app-height, 100dvh) * 0.064), 56px);
 }
 .keypad.yams-pad button.ok { grid-column: auto; font-size: 1.5rem; }
 .combo-pad { display: flex; flex-direction: column; gap: 6px; padding: 0 2px 4px; }
@@ -576,7 +577,7 @@ body.home { overflow-y: auto; }
 }
 .stats-sheet {
   width: 100%; max-width: 640px;
-  max-height: calc(100dvh - 24px - env(safe-area-inset-top));
+  max-height: calc(var(--app-height, 100dvh) - 24px - env(safe-area-inset-top));
   overflow-y: auto;
   background: var(--bg);
   border-radius: 18px 18px 0 0;
@@ -764,7 +765,7 @@ body.home { overflow-y: auto; }
 .scan-view {
   position: relative; overflow: hidden;
   border-radius: 14px; background: #000;
-  aspect-ratio: 3 / 4; max-height: 60dvh; margin: 10px auto 0; width: 100%;
+  aspect-ratio: 3 / 4; max-height: calc(var(--app-height, 100dvh) * 0.6); margin: 10px auto 0; width: 100%;
 }
 .scan-view video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .scan-mark {
