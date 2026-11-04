@@ -3,6 +3,10 @@
 /* Shared helpers for every score sheet: sound, wake lock, fullscreen,
    toast and the player editor (name, color, order). */
 
+// Shown on the home page, to check that a phone runs the latest version
+// (bumped with the service worker cache name).
+const APP_VERSION = 31;
+
 const COLORS = [
   '#e53935', '#fb8c00', '#fdd835', '#43a047', '#00897b',
   '#1e88e5', '#3949ab', '#8e24aa', '#d81b60', '#6d4c41',
