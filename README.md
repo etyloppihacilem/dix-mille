@@ -80,9 +80,13 @@ nom de jeu dans le détail par jeu.
   ensemble restent ainsi comparables.
 - **Filtre par jeu** (bulles sous les périodes) : toutes les statistiques, faits marquants
   et graphiques ne portent alors que sur ce jeu ; il se combine avec la période.
-- **Faits marquants** : plus longue série de victoires, série en cours, plus belle
+- **Faits marquants** : plus longue disette au dix-mille (tours à 0 d'affilée), plus longue série de victoires, série en cours, plus belle
   journée, grande rivalité, partie la plus serrée, spécialiste d'un jeu, joueur le plus
   assidu, jeu le plus joué, journée la plus chargée.
+- **Toutes les parties**, repliées sur une ligne (jeu, date, gagnant) et affichées par
+  pages de 20 : un toucher déplie les scores, « 📊 Statistiques » rouvre les stats de la
+  partie (courbe tour par tour, résumé, feuille complète au yams). Le détail tour par
+  tour est gardé avec chaque partie terminée sur le téléphone où elle a été jouée.
 - **Graphiques** : victoires cumulées, indice de chacun au fil des parties (ligne de la
   moyenne), activité (parties par jour, semaine ou mois), parties par jeu, et tableau
   des duels (victoires–défaites de chaque joueur face à chaque autre).

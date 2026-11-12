@@ -66,10 +66,17 @@ function syncRecord() {
   const done = state.players.length && state.players.every((p) => isComplete(p.id));
   if (!done) { unrecordGame(state.gameId); return; }
   const best = Math.max(...state.players.map((p) => totals(p.id).total));
+  const prog = yamsProgress();
   recordGame({
     gameId: state.gameId,
     game: 'yams',
-    players: state.players.map((p) => ({ id: p.id, name: p.name, color: p.color, score: totals(p.id).total, turns: PLAY_ROWS.length })),
+    // Kept to show the game again later: the total after each turn and
+    // the full sheet (boxes in the order of YAMS_BOXES).
+    players: state.players.map((p) => ({
+      id: p.id, name: p.name, color: p.color, score: totals(p.id).total, turns: PLAY_ROWS.length,
+      pts: prog[p.id].points.slice(1).map(([, t]) => t),
+      cells: PLAY_ROWS.map((r) => cell(p.id, r.key)),
+    })),
     winners: state.players.filter((p) => totals(p.id).total === best).map((p) => p.id),
   });
 }
@@ -146,8 +153,8 @@ function redo() {
 
 /* ---------- Statistics ---------- */
 
-function showStats() {
-  // Replay the log to rebuild each player's total after each of their turns.
+// Replays the log to rebuild each player's total after each of their turns.
+function yamsProgress() {
   const cells = {};
   const series = Object.fromEntries(state.players.map((p) => [p.id, { turns: 0, points: [[0, 0]] }]));
   for (const e of state.log) {
@@ -160,6 +167,11 @@ function showStats() {
     if (e.fill) { s.turns++; s.points.push([s.turns, t]); }
     else s.points[s.points.length - 1] = [s.turns, t];
   }
+  return series;
+}
+
+function showStats() {
+  const series = yamsProgress();
 
   const all = state.players.map((p) => ({ p, t: totals(p.id) }));
   const best = Math.max(...all.map((x) => x.t.total));

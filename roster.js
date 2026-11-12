@@ -23,6 +23,9 @@ function gameInfo(g) {
   return GAMES[g.game] || { name: g.game, icon: '•', color: '#888' };
 }
 
+// Boxes of a yams sheet, in the order a finished game keeps them (yams.js PLAY_ROWS).
+const YAMS_BOXES = ['As', '2', '3', '4', '5', '6', 'Brelan', 'Carré', 'Full', 'Petite suite', 'Grande suite', 'Yams', 'Chance'];
+
 let roster = loadJSON(ROSTER_KEY) || [];
 
 const saveRoster = () => saveJSON(ROSTER_KEY, roster);

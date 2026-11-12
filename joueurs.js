@@ -323,8 +323,21 @@ function renderStats() {
     box.append(rs);
   }
 
-  const recent = section('Dernières parties');
-  for (const g of [...list].reverse().slice(0, 30)) recent.append(gameRow(g));
+  // Every game, newest first, folded to one line each and shown by pages.
+  const recent = section(`Parties (${list.length})`);
+  const newest = [...list].reverse();
+  const more = el('button', 'wide-btn more-btn');
+  more.type = 'button';
+  let shown = 0;
+  const page = () => {
+    for (const g of newest.slice(shown, shown + 20)) recent.insertBefore(gameRow(g), more);
+    shown = Math.min(newest.length, shown + 20);
+    more.hidden = shown >= newest.length;
+    more.textContent = `Afficher ${Math.min(20, newest.length - shown)} parties de plus`;
+  };
+  more.addEventListener('click', page);
+  recent.append(more);
+  page();
   box.append(recent);
 }
 
@@ -438,6 +451,19 @@ function highlights(list, players) {
     out.push({ icon: '🎓', title: 'Spécialiste', text: `${top.s.name} · ${gameInfo(g).name}`, sub: `${top.wins} victoires sur ${top.played}` });
   }
 
+  // Longest run of turns at 0 at the dix-mille.
+  let drought = null;
+  for (const g of list) {
+    if (g.game !== 'dix-mille') continue;
+    for (const p of g.players) {
+      if (who(p).guest || !p.dry) continue;
+      if (!drought || p.dry > drought.n) drought = { n: p.dry, name: who(p).name, at: g.endedAt };
+    }
+  }
+  if (drought && drought.n >= 2) {
+    out.push({ icon: '🥶', title: 'Plus longue disette', text: `${drought.name} : ${drought.n} tours à 0 d’affilée`, sub: `au dix-mille, le ${dateLabel(drought.at)}` });
+  }
+
   if (players.length > 1) {
     const busy = by(players, (s) => s.played);
     out.push({ icon: '🏃', title: 'Le plus assidu', text: `${busy.name} : ${busy.played} parties` });
@@ -525,27 +551,47 @@ function records(list) {
   return out;
 }
 
-function gameRow(g) {
-  const row = el('div', 'past-game');
-  const info = gameInfo(g);
-  const icon = el('span', 'past-game-icon', info.icon);
-  icon.style.background = info.color;
-  const body = el('div', 'past-game-body');
-  body.append(el('div', 'past-game-title', `${info.name} · ${when(g.endedAt)}`));
-  // Players by result; teammates (scoppa) share a line.
+// One entry per side of a game (a player, or a team at the scoppa), best first.
+function sidesOf(g) {
   const order = [...g.players].sort((a, b) => (g.lowWins ? a.score - b.score : b.score - a.score));
   const seen = new Set();
-  const parts = [];
+  const out = [];
   for (const p of order) {
-    if (seen.has(p.team || p.id)) continue;
-    seen.add(p.team || p.id);
+    const key = p.team || p.id;
+    if (seen.has(key)) continue;
+    seen.add(key);
     const mates = p.team ? order.filter((o) => o.team === p.team) : [p];
-    const names = mates.map((m) => who(m).name).join(' & ');
-    // A game with a single winner (entered by hand) has no points to show.
-    parts.push(`${g.winners.includes(p.id) ? '🏆 ' : ''}${names}${g.mode === 'winner' ? '' : ` ${fmt(p.score)}`}`);
+    out.push({
+      name: mates.map((m) => who(m).name).join(' & '), color: who(mates[0]).color,
+      score: p.score, pts: p.pts, turns: p.turns, dry: p.dry, cells: p.cells, won: g.winners.includes(p.id),
+    });
   }
-  body.append(el('div', 'past-game-scores', parts.join(' · ')));
-  const del = el('button', 'past-btn del', '✕');
+  return out;
+}
+
+// A game of the history, folded to one line; tapping it shows the scores.
+function gameRow(g) {
+  const row = el('details', 'past-game');
+  const info = gameInfo(g);
+  const sides = sidesOf(g);
+  const sum = el('summary', 'past-game-sum');
+  const icon = el('span', 'past-game-icon', info.icon);
+  icon.style.background = info.color;
+  const head = el('div', 'past-game-body');
+  head.append(el('div', 'past-game-title', `${info.name} · ${when(g.endedAt)}`));
+  const winners = sides.filter((x) => x.won);
+  head.append(el('div', 'past-game-scores', `🏆 ${winners.map((x) => x.name).join(' et ')}${g.mode === 'winner' ? '' : ` · ${fmt(winners[0]?.score ?? 0)}`}`));
+  sum.append(icon, head, el('span', 'past-game-chevron', '›'));
+  row.append(sum);
+
+  const body = el('div', 'past-game-detail');
+  // A game with a single winner (entered by hand) has no points to show.
+  body.append(el('div', 'past-game-scores', sides.map((x) => `${x.won ? '🏆 ' : ''}${x.name}${g.mode === 'winner' ? '' : ` ${fmt(x.score)}`}`).join(' · ')));
+  const actions = el('div', 'btn-row');
+  const stats = el('button', 'wide-btn', '📊 Statistiques');
+  stats.type = 'button';
+  stats.addEventListener('click', () => openRecordStats(g));
+  const del = el('button', 'wide-btn danger', 'Retirer');
   del.type = 'button';
   del.setAttribute('aria-label', 'Retirer cette partie des statistiques');
   del.addEventListener('click', () => {
@@ -553,8 +599,91 @@ function gameRow(g) {
     unrecordGame(g.gameId);
     renderStats();
   });
-  row.append(icon, body, del);
+  actions.append(stats, del);
+  body.append(actions);
+  row.append(body);
   return row;
+}
+
+// Longest run of turns without points in a list of per-turn points.
+function longestZeroRun(deltas) {
+  let run = 0, best = 0;
+  for (const d of deltas) { run = d === 0 ? run + 1 : 0; best = Math.max(best, run); }
+  return best;
+}
+
+// Statistics of a finished game, rebuilt from what the history kept.
+function openRecordStats(g) {
+  const info = gameInfo(g);
+  const sides = sidesOf(g);
+  const dash = '—';
+  const darts = g.game === 'flechettes';
+  const start = darts ? g.target || Math.max(...sides.map((x) => (x.pts && x.pts.length ? x.pts[0] : x.score))) : 0;
+  const withPts = sides.filter((x) => x.pts && x.pts.length);
+  // Points scored at each turn: added (or, at darts, taken off the score).
+  const deltas = (x) => (x.pts || []).map((v, i) => {
+    const before = i ? x.pts[i - 1] : start;
+    return darts ? before - v : v - before;
+  });
+  const unit = g.game === 'scoppa' ? 'manche' : darts ? 'volée' : 'tour';
+  const n = (x) => x.turns || (x.pts ? x.pts.length : 0);
+  const avg = (x) => (deltas(x).length ? fmt(Math.round(deltas(x).reduce((t, d) => t + d, 0) / deltas(x).length)) : dash);
+  const best = (x) => (deltas(x).length ? fmt(Math.max(...deltas(x))) : dash);
+  const zeros = (x) => deltas(x).filter((d) => d === 0).length;
+  const dry = (x) => (x.pts && x.pts.length ? longestZeroRun(deltas(x)) : x.dry ?? null);
+  const plural = (k, w) => `${k} ${w}${k > 1 ? 's' : ''}`;
+
+  const rows = [['Score', ...sides.map((x) => (g.mode === 'winner' ? (x.won ? '🏆' : '·') : fmt(x.score)))]];
+  if (g.game === 'dix-mille') {
+    rows.push(
+      ['Tours joués', ...sides.map((x) => n(x) || dash)],
+      ['Moyenne par tour', ...sides.map(avg)],
+      ['Meilleur tour', ...sides.map(best)],
+      ['Tours à 0', ...sides.map((x) => (x.pts && x.pts.length ? zeros(x) : dash))],
+      ['Plus longue série à 0', ...sides.map((x) => (dry(x) != null ? plural(dry(x), 'tour') : dash))],
+    );
+  } else if (darts) {
+    rows.push(
+      ['Volées', ...sides.map((x) => n(x) || dash)],
+      ['Moyenne par volée', ...sides.map(avg)],
+      ['Meilleure volée', ...sides.map(best)],
+      ['Volées sans points', ...sides.map((x) => (x.pts && x.pts.length ? zeros(x) : dash))],
+    );
+  } else if (g.game === 'scoppa') {
+    rows.push(
+      ['Manches', ...sides.map((x) => n(x) || dash)],
+      ['Meilleure manche', ...sides.map(best)],
+    );
+  }
+  const tables = [{ title: 'Résumé', players: sides, rows }];
+  if (g.game === 'yams' && sides.some((x) => x.cells)) {
+    const box = (x, i) => (!x.cells || x.cells[i] == null ? dash : x.cells[i] === 0 ? '✗' : x.cells[i]);
+    const upper = (x) => (x.cells ? x.cells.slice(0, 6).reduce((t, v) => t + (v || 0), 0) : null);
+    tables.push({
+      title: 'Feuille',
+      players: sides,
+      rows: [
+        ...YAMS_BOXES.slice(0, 6).map((label, i) => [label, ...sides.map((x) => box(x, i))]),
+        ['Bonus (63)', ...sides.map((x) => (upper(x) == null ? dash : upper(x) >= 63 ? '+35' : '✗'))],
+        ...YAMS_BOXES.slice(6).map((label, i) => [label, ...sides.map((x) => box(x, i + 6))]),
+        ['Total', ...sides.map((x) => fmt(x.score))],
+      ],
+    });
+  }
+
+  const winners = sides.filter((x) => x.won).map((x) => x.name).join(' et ');
+  const date = new Date(g.endedAt).toLocaleString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+  openStats({
+    title: info.name,
+    headline: `🏆 ${winners} · ${date}`,
+    series: withPts.length ? sides.map((x) => ({ name: x.name, color: x.color, points: [[0, start], ...(x.pts || []).map((v, i) => [i + 1, v])] })) : [],
+    chart: { target: darts ? undefined : g.target, xName: unit, xTitle: unit.charAt(0).toUpperCase() + unit.slice(1), ...(darts ? { yName: 'Score restant' } : {}) },
+    chartNote: g.game === 'autre'
+      ? 'Partie ajoutée à la main : pas de détail tour par tour.'
+      : 'Le détail tour par tour n’est pas disponible pour cette partie (terminée avant cette mise à jour, ou reçue d’un autre téléphone).',
+    tables,
+    closeLabel: 'Fermer',
+  });
 }
 
 /* ---------- Roster ---------- */

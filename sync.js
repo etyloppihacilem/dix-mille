@@ -10,8 +10,11 @@
        k: ['yams', 'autre:Tarot', …],              kinds of games
        s: ['Alice & Chloé', …],                    scoppa team names
        g: [[gameId, kind, minutes since 1970, flags,
-            [[player, score, turns, team], …], [winner, …]], …] }
+            [[player, score, turns, team or -1, longest run of 0], …], [winner, …], target], …] }
+   (trailing entries left out when empty).
    flags: 1 = lowest score wins, 2 = single winner, 4 = points (other games).
+   The turn-by-turn progression and the yams sheet stay on the phone that
+   played the game, to keep the QR codes few.
    The JSON is deflated, base64url-encoded and cut into frames
      FDS2|transfer|index|count|z|data
    (z = 1 when deflated) shown one after the other as QR codes. */
@@ -45,12 +48,16 @@ function buildBundle(sharedIds, everything = false) {
     const flags = (game.lowWins ? 1 : 0) | (game.mode === 'winner' ? 2 : 0) | (game.mode === 'points' ? 4 : 0);
     const entries = game.players.map((q) => {
       const e = [player(q), q.score];
-      if (q.turns || q.team) e.push(q.turns || 0);
-      if (q.team) e.push(idx(s, sIdx, q.team, q.team));
+      const team = q.team ? idx(s, sIdx, q.team, q.team) : -1;
+      if (q.turns || team >= 0 || q.dry) e.push(q.turns || 0);
+      if (team >= 0 || q.dry) e.push(team);
+      if (q.dry) e.push(q.dry);
       return e;
     });
     const winners = game.winners.map((id) => pIdx.get(id)).filter((i) => i != null);
-    return [game.gameId, idx(k, kIdx, gameKey(game), gameKey(game)), Math.round(game.endedAt / 60000), flags, entries, winners];
+    const row = [game.gameId, idx(k, kIdx, gameKey(game), gameKey(game)), Math.round(game.endedAt / 60000), flags, entries, winners];
+    if (game.target) row.push(game.target);
+    return row;
   });
   return { bundle: { v: 2, p, m: sharedIds.map((id) => pIdx.get(id)), k, s, g }, games: games.length };
 }
@@ -145,22 +152,24 @@ function importBundle(bundle) {
   const history = loadHistory();
   const known = new Set(history.map((g) => g.gameId));
   let added = 0;
-  for (const [gameId, kind, minutes, flags, entries, winners] of bundle.g) {
+  for (const [gameId, kind, minutes, flags, entries, winners, target] of bundle.g) {
     if (known.has(gameId)) continue;
     const key = bundle.k[kind] || '';
     const rec = {
       gameId,
       game: key.startsWith('autre:') ? 'autre' : key,
       endedAt: minutes * 60000,
-      players: entries.map(([pi, score, turns, team]) => ({
+      players: entries.map(([pi, score, turns, team, dry]) => ({
         id: local[pi].id, name: local[pi].name, color: local[pi].color, score,
         ...(turns ? { turns } : {}),
-        ...(team != null ? { team: bundle.s[team] } : {}),
+        ...(team != null && team >= 0 ? { team: bundle.s[team] } : {}),
+        ...(dry ? { dry } : {}),
         ...(local[pi].guest ? { guest: true } : {}),
       })),
       winners: winners.map((pi) => local[pi].id),
     };
     if (key.startsWith('autre:')) rec.title = key.slice(6);
+    if (target) rec.target = target;
     if (flags & 1) rec.lowWins = true;
     if (flags & 2) rec.mode = 'winner';
     if (flags & 4) rec.mode = 'points';

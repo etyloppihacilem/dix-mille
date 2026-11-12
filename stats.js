@@ -316,7 +316,7 @@ function openStats(opts) {
   const back = document.createElement('button');
   back.type = 'button';
   back.className = 'wide-btn primary';
-  back.textContent = 'Revenir à la partie';
+  back.textContent = opts.closeLabel || 'Revenir à la partie';
   back.addEventListener('click', closeStats);
   actions.append(back);
   sheet.append(actions);

@@ -68,16 +68,41 @@ function save() {
 function syncRecord() {
   const done = CD ? state.players.some((p) => p.score === 0) : state.finished;
   if (!done || !state.players.length) { unrecordGame(state.gameId); return; }
-  const turns = {};
-  for (const e of state.log) if (e.kind === 'add') turns[e.pid] = (turns[e.pid] || 0) + 1;
+  const prog = progress();
   const lead = leadScore();
   recordGame({
     gameId: state.gameId,
     game: GAME.game,
     lowWins: CD,
-    players: state.players.map((p) => ({ id: p.id, name: p.name, color: p.color, score: p.score, turns: turns[p.id] || 0 })),
+    target: target(),
+    players: state.players.map((p) => ({
+      id: p.id, name: p.name, color: p.color, score: p.score,
+      turns: prog[p.id].pts.length, pts: prog[p.id].pts,
+      ...(prog[p.id].dry ? { dry: prog[p.id].dry } : {}),
+    })),
     winners: state.players.filter((p) => p.score === lead).map((p) => p.id),
   });
+}
+
+/* Each player's score after each of their turns (kept with the finished game
+   to show its statistics again later) and their longest run of turns
+   scoring nothing (a 0, or a bust at darts). */
+function progress() {
+  const out = Object.fromEntries(state.players.map((p) => [p.id, { pts: [], run: 0, dry: 0, score: startScore() }]));
+  for (const e of state.log) {
+    const s = out[e.pid];
+    if (!s) continue;
+    if (e.kind === 'set') {
+      s.score = e.v;
+      if (s.pts.length) s.pts[s.pts.length - 1] = e.v;
+      continue;
+    }
+    if (CD) { if (!e.bust) s.score -= e.v; } else s.score += e.v;
+    s.pts.push(s.score);
+    s.run = e.bust || e.v === 0 ? s.run + 1 : 0;
+    s.dry = Math.max(s.dry, s.run);
+  }
+  return out;
 }
 
 const byId = (id) => state.players.find((p) => p.id === id);
@@ -241,7 +266,8 @@ const targetReached = () => state.players.some(hasWon);
 function showStats() {
   if (CD) { showCountdownStats(); return; }
   const T = target();
-  const per = state.players.map((p) => ({ p, turns: 0, sum: 0, best: null, zeros: 0, reachedAt: null, score: 0, points: [[0, 0]] }));
+  const prog = progress();
+  const per = state.players.map((p) => ({ p, turns: 0, sum: 0, best: null, zeros: 0, reachedAt: null, score: 0, points: [[0, 0]], dry: prog[p.id].dry }));
   const byPid = Object.fromEntries(per.map((x) => [x.p.id, x]));
   for (const e of state.log) {
     const s = byPid[e.pid];
@@ -280,6 +306,7 @@ function showStats() {
         ['Moyenne par tour', ...per.map((x) => (x.turns ? fmt(Math.round(x.sum / x.turns)) : dash))],
         ['Meilleur tour', ...per.map((x) => (x.best != null ? fmt(x.best) : dash))],
         ['Tours à 0', ...per.map((x) => (x.turns ? `${x.zeros} (${Math.round((100 * x.zeros) / x.turns)} %)` : dash))],
+        ['Plus longue série à 0', ...per.map((x) => (x.turns ? `${x.dry} tour${x.dry > 1 ? 's' : ''}` : dash))],
       ],
     }],
     onNewGame: newGame,

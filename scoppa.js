@@ -80,11 +80,17 @@ function syncRecord() {
   const w = winner();
   const teams = state.players.filter((t) => t.members.length);
   if (!w || !teams.length) { unrecordGame(state.gameId); return; }
+  // Team total after each manche, kept to show the game again later.
+  const pts = (tid) => {
+    let sum = 0;
+    return state.manches.map((m) => (sum += mancheScore(m, tid)));
+  };
   recordGame({
     gameId: state.gameId,
     game: 'scoppa',
+    target: state.target,
     players: teams.flatMap((t) => t.members.map((id) => ({
-      id, name: rosterById(id).name, color: rosterById(id).color, score: total(t.id), team: t.name, turns: state.manches.length,
+      id, name: rosterById(id).name, color: rosterById(id).color, score: total(t.id), team: t.name, turns: state.manches.length, pts: pts(t.id),
     }))),
     winners: w.members,
   });

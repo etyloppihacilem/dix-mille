@@ -5,7 +5,7 @@
 
 // Shown on the home page, to check that a phone runs the latest version
 // (bumped with the service worker cache name).
-const APP_VERSION = 31;
+const APP_VERSION = 32;
 
 const COLORS = [
   '#e53935', '#fb8c00', '#fdd835', '#43a047', '#00897b',
