@@ -5,7 +5,7 @@
 
 // Shown on the home page, to check that a phone runs the latest version
 // (bumped with the service worker cache name).
-const APP_VERSION = 32;
+const APP_VERSION = 33;
 
 const COLORS = [
   '#e53935', '#fb8c00', '#fdd835', '#43a047', '#00897b',
@@ -377,7 +377,42 @@ if (window.visualViewport) window.visualViewport.addEventListener('resize', fitA
 
 /* ---------- Page setup ---------- */
 
+/* ---------- Keypad layout ---------- */
+
+// 'phone': 1 2 3 on the top row; 'computer': 7 8 9 on top, like a numpad.
+const KEYPAD_KEY = 'keypad-layout';
+function keypadLayout() {
+  try { return localStorage.getItem(KEYPAD_KEY) === 'computer' ? 'computer' : 'phone'; } catch (e) { return 'phone'; }
+}
+
+function setKeypadLayout(layout) {
+  try { localStorage.setItem(KEYPAD_KEY, layout); } catch (e) { /* ignore */ }
+  applyKeypadLayout();
+}
+
+// Digit keys row by row, top to bottom, for the chosen layout.
+function keypadRows() {
+  const rows = [['1', '2', '3'], ['4', '5', '6'], ['7', '8', '9']];
+  return keypadLayout() === 'computer' ? rows.reverse() : rows;
+}
+
+/* Relabels the digit keys of the keypads written in the pages (written in
+   phone order): the key in a given place shows the digit of the layout. */
+function applyKeypadLayout(root = document) {
+  const order = keypadRows().flat();
+  root.querySelectorAll('.keypad').forEach((pad) => {
+    const keys = [...pad.querySelectorAll('button[data-k]')].filter((b) => /^[1-9]$/.test(b.dataset.slot || b.dataset.k));
+    keys.forEach((b) => {
+      if (!b.dataset.slot) b.dataset.slot = b.dataset.k; // its place, in phone order
+      const digit = order[Number(b.dataset.slot) - 1];
+      b.dataset.k = digit;
+      b.textContent = digit;
+    });
+  });
+}
+
 function initChrome() {
+  applyKeypadLayout();
   initSoundBtn();
   initWakeLock();
   initFullscreen();

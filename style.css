@@ -833,3 +833,12 @@ details[open] .past-game-chevron { transform: rotate(90deg); }
 .past-game-detail { padding: 0 10px 10px 54px; display: flex; flex-direction: column; gap: 8px; }
 .past-game-detail .wide-btn { padding: 10px; font-size: .9rem; }
 .more-btn { width: 100%; margin-top: 4px; }
+
+/* ---- Settings (home) ---- */
+.settings { padding: 8px 16px 0; }
+.settings h2 { font-size: 1rem; margin: 8px 0; }
+.setting-row {
+  display: flex; flex-direction: column; gap: 8px;
+  background: var(--surface); box-shadow: var(--shadow); border-radius: 12px; padding: 10px 12px;
+  font-weight: 600;
+}

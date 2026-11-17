@@ -133,6 +133,9 @@ par `stats.js`, sans bibliothèque externe.
 
 ## Commun
 
+- **Réglages** (en bas de l'accueil) : pavé numérique en mode téléphone (1 2 3 en haut)
+  ou ordinateur (7 8 9 en haut), pour tous les pavés (dix-mille, fléchettes, chance du yams).
+
 - Bouton **Joueurs / Équipes** : renommer, changer la couleur, réordonner, ajouter/supprimer, nouvelle partie.
 - Effets sonores (bouton ♪ pour couper), écran maintenu allumé (☀), plein écran (⛶ ;
   sur iPhone, ajouter l'app à l'écran d'accueil via Partager).

@@ -536,7 +536,7 @@ function renderEntry() {
   chip(actions, 'Fermer', () => { state.sel = null; pick = []; render(); }, 'clear');
   if (r.typed) {
     quick.className = 'keypad yams-pad';
-    for (const k of ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'back', '0', 'ok']) {
+    for (const k of [...keypadRows().flat(), 'back', '0', 'ok']) {
       const b = document.createElement('button');
       b.type = 'button';
       b.textContent = k === 'back' ? '⌫' : k === 'ok' ? '✓' : k;

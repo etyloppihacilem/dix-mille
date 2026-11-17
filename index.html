@@ -57,6 +57,13 @@
       <span class="game-text"><strong>Joueurs &amp; statistiques</strong><span>Victoires sur 24 h, 7 jours ou depuis toujours</span></span>
     </a>
   </main>
+  <section class="settings">
+    <h2>Réglages</h2>
+    <div class="setting-row">
+      <span>Pavé numérique</span>
+      <div id="keypadChoice" class="chips"></div>
+    </div>
+  </section>
   <p id="appVersion" class="app-version"></p>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
@@ -65,6 +72,19 @@
   <script>
     initChrome();
     document.getElementById('appVersion').textContent = `Version ${APP_VERSION}`;
+    function renderKeypadChoice() {
+      const box = document.getElementById('keypadChoice');
+      box.textContent = '';
+      for (const [layout, label] of [['phone', 'Téléphone · 1 2 3 en haut'], ['computer', 'Ordinateur · 7 8 9 en haut']]) {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'chip' + (keypadLayout() === layout ? ' on' : '');
+        b.textContent = label;
+        b.addEventListener('click', () => { setKeypadLayout(layout); renderKeypadChoice(); });
+        box.append(b);
+      }
+    }
+    renderKeypadChoice();
   </script>
 </body>
 </html>
